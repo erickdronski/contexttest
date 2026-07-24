@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compareVariants, median, summarizeTrials, wilsonInterval } from '../src/lib/stats.mjs';
+import { compareVariants, exactPairedPValue, median, pairTrials, summarizeTrials, wilsonInterval } from '../src/lib/stats.mjs';
 
 test('median handles odd and even samples', () => {
   assert.equal(median([1, 3, 2]), 2);
@@ -36,4 +36,27 @@ test('duration breaks an otherwise equal tie only when material', () => {
   const baseline = { attempts: 10, passRate: 1, meanAssertionScore: 1, medianDurationMs: 100 };
   const candidate = { attempts: 10, passRate: 1, meanAssertionScore: 1, medianDurationMs: 70 };
   assert.equal(compareVariants(baseline, candidate).winner, 'candidate');
+});
+
+test('computes a two-sided exact paired p-value', () => {
+  assert.equal(exactPairedPValue(0, 6), 0.031250000000000014);
+  assert.equal(exactPairedPValue(3, 3), 1);
+  assert.equal(exactPairedPValue(0, 0), 1);
+});
+
+test('pairs outcomes by task and attempt instead of treating runs as independent', () => {
+  const trials = [];
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    trials.push({ task: 'task', attempt, variant: 'without', passed: false });
+    trials.push({ task: 'task', attempt, variant: 'with', passed: true });
+  }
+  const paired = pairTrials(trials, 'without', 'with');
+  assert.deepEqual({ pairs: paired.pairs, leftWins: paired.leftWins, rightWins: paired.rightWins, bothPass: paired.bothPass, bothFail: paired.bothFail }, { pairs: 6, leftWins: 0, rightWins: 6, bothPass: 0, bothFail: 0 });
+  const comparison = compareVariants(
+    { attempts: 6, passRate: 0, meanAssertionScore: 0, medianDurationMs: 100 },
+    { attempts: 6, passRate: 1, meanAssertionScore: 1, medianDurationMs: 100 },
+    paired,
+  );
+  assert.equal(comparison.statisticallySignificant, true);
+  assert.equal(comparison.signal, 'convincing');
 });

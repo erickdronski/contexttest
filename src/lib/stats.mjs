@@ -39,7 +39,40 @@ export function summarizeTrials(trials) {
   };
 }
 
-export function compareVariants(left, right) {
+function logCombination(total, selected) {
+  const count = Math.min(selected, total - selected);
+  let value = 0;
+  for (let index = 1; index <= count; index += 1) value += Math.log(total - count + index) - Math.log(index);
+  return value;
+}
+
+export function exactPairedPValue(leftWins, rightWins) {
+  const discordant = leftWins + rightWins;
+  if (!discordant) return 1;
+  const tail = Math.min(leftWins, rightWins);
+  let cumulative = 0;
+  for (let successes = 0; successes <= tail; successes += 1) cumulative += Math.exp(logCombination(discordant, successes) - discordant * Math.log(2));
+  return Math.min(1, 2 * cumulative);
+}
+
+export function pairTrials(trials, leftName, rightName) {
+  const pairs = new Map();
+  for (const trial of trials) {
+    const key = `${trial.task}\u0000${trial.attempt}`;
+    const pair = pairs.get(key) ?? { task: trial.task, attempt: trial.attempt };
+    if (trial.variant === leftName) pair.left = trial;
+    if (trial.variant === rightName) pair.right = trial;
+    pairs.set(key, pair);
+  }
+  const complete = [...pairs.values()].filter((pair) => pair.left && pair.right);
+  const leftWins = complete.filter((pair) => pair.left.passed && !pair.right.passed).length;
+  const rightWins = complete.filter((pair) => !pair.left.passed && pair.right.passed).length;
+  const bothPass = complete.filter((pair) => pair.left.passed && pair.right.passed).length;
+  const bothFail = complete.filter((pair) => !pair.left.passed && !pair.right.passed).length;
+  return { pairs: complete.length, leftWins, rightWins, bothPass, bothFail, discordant: leftWins + rightWins, pValue: exactPairedPValue(leftWins, rightWins) };
+}
+
+export function compareVariants(left, right, paired = null) {
   const passDelta = right.passRate - left.passRate;
   const scoreDelta = (right.meanAssertionScore ?? 0) - (left.meanAssertionScore ?? 0);
   let winner = 'tie';
@@ -58,6 +91,7 @@ export function compareVariants(left, right) {
     }
   }
   const attempts = Math.min(left.attempts, right.attempts);
-  const signal = attempts < 3 ? 'anecdotal' : attempts < 5 ? 'early' : attempts < 10 ? 'directional' : 'stronger';
-  return { winner, reason, passRateDelta: passDelta, assertionScoreDelta: scoreDelta, signal, minimumAttempts: attempts };
+  const pValue = paired?.pValue ?? null;
+  const signal = attempts < 3 ? 'anecdotal' : attempts < 5 ? 'early' : pValue !== null && pValue <= 0.01 ? 'strong' : pValue !== null && pValue <= 0.05 ? 'convincing' : 'directional';
+  return { winner, reason, passRateDelta: passDelta, assertionScoreDelta: scoreDelta, signal, minimumAttempts: attempts, paired, pValue, statisticallySignificant: pValue !== null && pValue <= 0.05 };
 }

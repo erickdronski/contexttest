@@ -1,6 +1,6 @@
-import { interpolate, redact, runProcess, safeEnvironment, secretValues } from './utils.mjs';
+import { environmentSecrets, interpolate, redact, runProcess, safeEnvironment } from './utils.mjs';
 
-function parseCodexUsage(stdout) {
+export function parseCodexUsage(stdout) {
   const usage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null };
   for (const line of stdout.split('\n')) {
     try {
@@ -15,7 +15,7 @@ function parseCodexUsage(stdout) {
   return usage;
 }
 
-function parseClaudeUsage(stdout) {
+export function parseClaudeUsage(stdout) {
   try {
     const data = JSON.parse(stdout);
     const candidate = data.usage ?? {};
@@ -30,7 +30,7 @@ function parseClaudeUsage(stdout) {
   }
 }
 
-function buildCommand(agent, prompt, cwd) {
+export function buildCommand(agent, prompt, cwd) {
   if (agent.provider === 'codex') {
     const args = ['exec', '--ephemeral', '--sandbox', 'workspace-write', '--color', 'never', '--json', '-C', cwd];
     if (agent.model) args.push('--model', agent.model);
@@ -41,8 +41,8 @@ function buildCommand(agent, prompt, cwd) {
   if (agent.provider === 'claude') {
     const args = ['-p', prompt, '--output-format', 'json', '--permission-mode', agent.permissionMode ?? 'acceptEdits', '--max-turns', String(agent.maxTurns ?? 30)];
     if (agent.model) args.push('--model', agent.model);
-    for (const tool of agent.allowedTools ?? []) args.push('--allowedTools', tool);
-    for (const tool of agent.disallowedTools ?? []) args.push('--disallowedTools', tool);
+    if (agent.allowedTools?.length) args.push('--allowedTools', agent.allowedTools.join(','));
+    if (agent.disallowedTools?.length) args.push('--disallowedTools', agent.disallowedTools.join(','));
     return { command: agent.executable ?? 'claude', args, parseUsage: parseClaudeUsage };
   }
   if (agent.provider === 'command') {
@@ -55,7 +55,7 @@ function buildCommand(agent, prompt, cwd) {
 
 export async function runAgent({ agent, prompt, cwd, environment, onOutput, mock }) {
   const env = safeEnvironment(environment);
-  const secrets = secretValues({ ...process.env, ...env });
+  const secrets = environmentSecrets(environment, { ...process.env, ...env });
   if (agent.provider === 'mock') {
     if (!mock?.command) throw new Error('Mock tasks require mock.command.');
     const [command, ...args] = mock.command.map((part) => interpolate(part, { prompt, cwd }));

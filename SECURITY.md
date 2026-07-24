@@ -22,6 +22,8 @@ You should receive an acknowledgment within five business days.
 
 ContextTest orchestrates autonomous coding tools that can execute commands. Detached Git worktrees isolate repository changes but do not isolate the host filesystem, network, credentials, or external MCP tools.
 
+Configured setup and assertion commands are trusted code and execute with the same host-level access as ContextTest. Commands are spawned as argument arrays without a shell, but the executable itself can perform arbitrary actions. Review configuration changes with the same care as workflow changes.
+
 Safe defaults reduce accidental exposure; they do not convert an agent into trusted code. Use an external container or VM when any of these are untrusted:
 
 - Repository content
@@ -32,3 +34,7 @@ Safe defaults reduce accidental exposure; they do not convert an agent into trus
 - Package installation scripts
 
 Avoid passing production credentials to experiments. Prefer short-lived, least-privilege credentials scoped to a disposable environment.
+
+ContextTest redacts recognized token formats and values stored in secret-named environment variables from agent and assertion diagnostics. Redaction is defense in depth: inspect generated reports before sharing them, and never use a report as a secret-storage boundary.
+
+Generated state directories and configured file paths are checked for containment and unsafe symlink traversal before ContextTest reads, writes, or removes them. Treat any containment error as a configuration or repository-integrity problem; do not work around it with a broader path.

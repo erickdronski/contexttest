@@ -5,7 +5,10 @@ import { formatDuration, formatMoney } from './lib/utils.mjs';
 
 const input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll('-', '_')}`] ?? '';
 const output = async (name, value) => {
-  if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `${name}=${value}\n`, 'utf8');
+  if (process.env.GITHUB_OUTPUT) {
+    const delimiter = `contexttest_${Math.random().toString(36).slice(2)}`;
+    await appendFile(process.env.GITHUB_OUTPUT, `${name}<<${delimiter}\n${value}\n${delimiter}\n`, 'utf8');
+  }
   else process.stdout.write(`${name}=${value}\n`);
 };
 const percent = (value) => `${Math.round((value ?? 0) * 100)}%`;
@@ -23,4 +26,8 @@ async function main() {
   if (report.comparison.winner === 'baseline') process.exitCode = 2;
 }
 
-main().catch((error) => { process.stderr.write(`::error::${error.message.replaceAll('\n', '%0A')}\n`); process.exitCode = 1; });
+main().catch((error) => {
+  const escaped = error.message.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+  process.stderr.write(`::error::${escaped}\n`);
+  process.exitCode = 1;
+});

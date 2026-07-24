@@ -11,6 +11,14 @@ ContextTest follows evidence, not feature volume.
 - [x] Standalone HTML and versioned JSON reports
 - [x] GitHub Action and safe environment defaults
 
+## 0.2 — measurement hardening
+
+- [x] Exact paired pass/fail analysis and task-level breakdowns
+- [x] Per-trial setup commands excluded from agent metrics
+- [x] Runtime validation aligned with the documented schema
+- [x] Clean-install tarball smoke test
+- [x] Reproducibility metadata and resolved task commits
+
 ## Next
 
 - [x] Paired task ordering with alternated variant order
@@ -19,8 +27,7 @@ ContextTest follows evidence, not feature volume.
 - [ ] Historical task harvesting from issues and fixing commits
 - [ ] Container executor with network policy
 - [ ] Comparison across agent providers and models
-- [ ] JSON Schema validation inside the CLI
-- [ ] Report aggregation across commits
+- [ ] Schema-versioned report aggregation across commits
 
 ## Explicit non-goals
 
