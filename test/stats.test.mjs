@@ -31,3 +31,9 @@ test('candidate wins on a material pass-rate improvement', () => {
   assert.equal(comparison.winner, 'candidate');
   assert.equal(comparison.signal, 'directional');
 });
+
+test('duration breaks an otherwise equal tie only when material', () => {
+  const baseline = { attempts: 10, passRate: 1, meanAssertionScore: 1, medianDurationMs: 100 };
+  const candidate = { attempts: 10, passRate: 1, meanAssertionScore: 1, medianDurationMs: 70 };
+  assert.equal(compareVariants(baseline, candidate).winner, 'candidate');
+});

@@ -79,6 +79,6 @@ ${metricRow('Median cost', baseline.summary.medianCostUsd, candidate.summary.med
 </tbody></table></section>
 <section class="section"><div class="section-head"><h3>Trial record</h3><span class="section-note">Open any run to inspect its evidence.</span></div><div class="trial-grid"><div><div class="lane-label">${escapeHtml(baseline.name)}</div>${baseline.trials.map(trialCard).join('')}</div><div><div class="lane-label">${escapeHtml(candidate.name)}</div>${candidate.trials.map(trialCard).join('')}</div></div></section>
 <section class="section"><div class="section-head"><h3>How to read this</h3><span class="section-note">Evidence before narrative.</span></div><div class="method"><p>Each variant received the same tasks from the same Git commit in detached worktrees. A run passes only when the agent exits cleanly and every configured assertion passes.</p><p>Agent behavior is stochastic. Treat fewer than five paired runs as exploratory. ContextTest reports a Wilson interval in JSON and avoids claiming statistical significance from tiny samples.</p></div></section>
-<footer><span>Generated locally by ContextTest ${escapeHtml(report.version)}</span><span>No source code or prompts are embedded in this report.</span></footer>
+<footer><span>Generated locally by ContextTest ${escapeHtml(report.version)}</span><span>Inspect diagnostics for sensitive code or paths before sharing.</span></footer>
 </main></body></html>`;
 }

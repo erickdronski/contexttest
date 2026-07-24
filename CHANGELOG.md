@@ -10,6 +10,7 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 - Provider-neutral experiment engine with Codex and Claude Code adapters
 - Detached Git worktree isolation and per-variant baselines
+- Alternating paired-trial order to reduce time-order bias
 - Eleven deterministic assertion types
 - Repeated-trial summaries and Wilson pass-rate intervals
 - Standalone HTML and machine-readable JSON reports

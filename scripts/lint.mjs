@@ -16,7 +16,7 @@ const files = (await Promise.all(roots.map(collect))).flat().sort();
 let failures = 0;
 for (const file of files) {
   const content = await readFile(file, 'utf8');
-  if (/\s+$/.test(content) && !content.endsWith('\n')) { process.stderr.write(`${file}: missing final newline\n`); failures += 1; }
+  if (!content.endsWith('\n')) { process.stderr.write(`${file}: missing final newline\n`); failures += 1; }
   if (file.endsWith('.json')) {
     try { JSON.parse(content); } catch (error) { process.stderr.write(`${file}: ${error.message}\n`); failures += 1; }
   }

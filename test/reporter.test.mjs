@@ -12,6 +12,7 @@ test('HTML report is standalone and escapes data', () => {
   assert.match(html, /project &lt;unsafe&gt;/);
   assert.equal(html.includes('https://'), false);
   assert.match(html, /prefers-reduced-motion/);
+  assert.match(html, /Inspect diagnostics/);
 });
 
 test('terminal report presents verdict and metrics', () => {

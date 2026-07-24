@@ -32,8 +32,11 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
   if (!tasks.length) throw new Error(`No task named ${taskFilter}.`);
   const attempts = config.trials?.attempts ?? 3;
   const jobs = [];
-  for (const [variantIndex, variant] of config.variants.entries()) {
-    for (const task of tasks) for (let attempt = 1; attempt <= attempts; attempt += 1) jobs.push({ variant, variantIndex, task, attempt });
+  for (const task of tasks) {
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const orderedVariants = attempt % 2 ? config.variants : [...config.variants].reverse();
+      for (const variant of orderedVariants) jobs.push({ variant, variantIndex: config.variants.indexOf(variant), task, attempt });
+    }
   }
   onEvent({ type: 'experiment:start', runId, jobs: jobs.length });
   const trialResults = await pool(jobs, config.trials?.concurrency ?? 1, async (job, jobIndex) => {

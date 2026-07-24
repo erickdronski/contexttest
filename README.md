@@ -19,6 +19,10 @@ You changed `AGENTS.md`. Did the agent get better—or did you add 200 lines of 
 
 ContextTest replaces intuition with an experiment. It gives Codex or Claude Code the same tasks from the same Git commit, runs each attempt in a detached worktree, verifies the result with deterministic assertions, and produces an evidence-backed comparison.
 
+<p align="center">
+  <img src="assets/report-preview.svg" width="100%" alt="ContextTest report comparing a baseline with a candidate instruction file">
+</p>
+
 ```text
                          without        with
 Task success             33%            100%
@@ -65,7 +69,7 @@ ContextTest writes two artifacts under `.contexttest/reports/<run>/`:
 - `report.html` — a private, standalone experiment report
 - `report.json` — the complete machine-readable evidence record
 
-No account, server, database, or telemetry is involved.
+No account, server, database, or telemetry is involved. Reports remain local, but failed-run diagnostics can contain source excerpts, paths, or agent output. Inspect them before sharing.
 
 ## A complete experiment
 
@@ -233,6 +237,8 @@ ContextTest therefore:
 - Refuses to delete paths outside its generated worktree directory
 
 For untrusted repositories, prompts, models, or MCP servers, run ContextTest inside a disposable VM or container. Read [SECURITY.md](SECURITY.md) before using it in CI with credentials.
+
+Redaction is defense in depth, not a guarantee. ContextTest excludes the configured task prompt from report metadata, but an agent or failing command may repeat sensitive content in its output.
 
 ## Interpreting results
 

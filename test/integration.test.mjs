@@ -31,10 +31,12 @@ test('runs a complete paired experiment and keeps instruction changes out of met
     variants: [{ name: 'baseline', disabled: true }, { name: 'candidate', source: 'candidate.md' }],
     tasks: [{ name: 'change', prompt: 'change the value', mock: { command: ['node', 'agent.mjs'] }, assertions: [{ type: 'fileContains', path: 'value.txt', value: 'expected' }, { type: 'maxChangedFiles', value: 1 }] }],
   };
-  const report = await runExperiment({ config, root });
+  const started = [];
+  const report = await runExperiment({ config, root, onEvent: (event) => { if (event.type === 'trial:start') started.push(`${event.variant.name}-${event.attempt}`); } });
   assert.equal(report.comparison.winner, 'candidate');
   assert.equal(report.variants[0].summary.passRate, 0);
   assert.equal(report.variants[1].summary.passRate, 1);
   assert.deepEqual(report.variants[1].trials[0].files, ['value.txt']);
+  assert.deepEqual(started, ['baseline-1', 'candidate-1', 'candidate-2', 'baseline-2']);
   assert.equal(await readFile(report.artifacts.html, 'utf8').then((html) => html.startsWith('<!doctype html>')), true);
 });

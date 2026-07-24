@@ -13,7 +13,8 @@ ContextTest follows evidence, not feature volume.
 
 ## Next
 
-- [ ] Paired task ordering and seeded randomized run order
+- [x] Paired task ordering with alternated variant order
+- [ ] Seeded randomized task order
 - [ ] Instruction-section ablation experiments
 - [ ] Historical task harvesting from issues and fixing commits
 - [ ] Container executor with network policy

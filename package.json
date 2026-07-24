@@ -11,8 +11,12 @@
   },
   "files": [
     "src",
+    "schema",
+    "assets",
     "action.yml",
     "README.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
     "LICENSE"
   ],
   "scripts": {
