@@ -5,7 +5,7 @@ import { mkdtemp, readFile, rename, symlink, writeFile } from 'node:fs/promises'
 import { promisify } from 'node:util';
 import os from 'node:os';
 import path from 'node:path';
-import { applyVariant, changedFiles, diffStats } from '../src/lib/git.mjs';
+import { applyVariant, changedFiles, createWorktree, diffStats, removeWorktree } from '../src/lib/git.mjs';
 
 const exec = promisify(execFile);
 
@@ -51,4 +51,19 @@ test('variant files cannot traverse symlinks outside trusted roots', { skip: pro
   await symlink(outsideDestination, path.join(worktree, 'AGENTS.md'));
   await assert.rejects(() => applyVariant({ root, worktree, instructionFile: 'AGENTS.md', variant: { content: 'overwrite' } }), /symlinked instruction destination/);
   assert.equal(await readFile(outsideDestination, 'utf8'), 'do not overwrite\n');
+});
+
+test('parallel trials serialize Git worktree registry mutations', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contexttest-parallel-worktrees-'));
+  const worktreeRoot = path.join(root, '.contexttest', 'worktrees', 'test-run');
+  const env = { ...process.env, GIT_AUTHOR_NAME: 'Test', GIT_AUTHOR_EMAIL: 'test@example.com', GIT_COMMITTER_NAME: 'Test', GIT_COMMITTER_EMAIL: 'test@example.com' };
+  await exec('git', ['init'], { cwd: root, env });
+  await writeFile(path.join(root, 'seed.txt'), 'seed\n');
+  await exec('git', ['add', '.'], { cwd: root, env });
+  await exec('git', ['commit', '-m', 'fixture'], { cwd: root, env });
+  const destinations = Array.from({ length: 6 }, (_, index) => path.join(worktreeRoot, `trial-${index + 1}`));
+  await Promise.all(destinations.map((destination) => createWorktree({ repository: root, destination, ref: 'HEAD', env })));
+  await Promise.all(destinations.map((destination) => removeWorktree({ repository: root, destination, worktreeRoot, env })));
+  const listed = await exec('git', ['worktree', 'list', '--porcelain'], { cwd: root, env });
+  assert.equal(listed.stdout.split('\n').filter((line) => line.startsWith('worktree ')).length, 1);
 });

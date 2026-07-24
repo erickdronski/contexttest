@@ -2,6 +2,14 @@ import { copyFile, lstat, mkdir, readFile, realpath, rm, unlink, writeFile } fro
 import path from 'node:path';
 import { exists, isPathInside, runProcess } from './utils.mjs';
 
+let worktreeMutationChain = Promise.resolve();
+
+function serializeWorktreeMutation(operation) {
+  const next = worktreeMutationChain.then(operation, operation);
+  worktreeMutationChain = next.catch(() => {});
+  return next;
+}
+
 async function git(args, cwd, options = {}) {
   const result = await runProcess('git', args, { cwd, env: options.env ?? process.env, timeoutMs: options.timeoutMs ?? 120_000 });
   if (result.code !== 0 && !options.allowFailure) throw new Error(`git ${args.join(' ')} failed:\n${result.stderr || result.stdout}`);
@@ -20,15 +28,19 @@ export async function assertGitRepository(root) {
 
 export async function createWorktree({ repository, destination, ref, env }) {
   await mkdir(path.dirname(destination), { recursive: true });
-  const result = await git(['worktree', 'add', '--detach', destination, ref], repository, { env, allowFailure: true });
-  if (result.code !== 0) throw new Error(`Could not create trial worktree at ${destination}:\n${result.stderr || result.stdout}`);
+  await serializeWorktreeMutation(async () => {
+    const result = await git(['worktree', 'add', '--detach', destination, ref], repository, { env, allowFailure: true });
+    if (result.code !== 0) throw new Error(`Could not create trial worktree at ${destination}:\n${result.stderr || result.stdout}`);
+  });
 }
 
 export async function removeWorktree({ repository, destination, worktreeRoot, env }) {
   if (!isPathInside(worktreeRoot, destination) || path.resolve(destination) === path.resolve(worktreeRoot)) throw new Error(`Refusing to remove unsafe worktree path: ${destination}`);
-  await git(['worktree', 'remove', '--force', destination], repository, { env, allowFailure: true });
-  if (await exists(destination)) await rm(destination, { recursive: true, force: true });
-  await git(['worktree', 'prune'], repository, { env, allowFailure: true });
+  await serializeWorktreeMutation(async () => {
+    await git(['worktree', 'remove', '--force', destination], repository, { env, allowFailure: true });
+    if (await exists(destination)) await rm(destination, { recursive: true, force: true });
+    await git(['worktree', 'prune'], repository, { env, allowFailure: true });
+  });
 }
 
 export async function applyVariant({ root, worktree, instructionFile, variant }) {

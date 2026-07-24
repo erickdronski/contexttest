@@ -12,11 +12,20 @@
   "files": [
     "src",
     "schema",
-    "assets",
+    "assets/contexttest-mark.svg",
+    "assets/report-preview.svg",
+    "docs",
+    "examples",
+    "scripts",
+    "test",
     "action.yml",
     "README.md",
     "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "ROADMAP.md",
     "SECURITY.md",
+    "SUPPORT.md",
     "LICENSE"
   ],
   "scripts": {
@@ -26,6 +35,7 @@
     "check": "npm run lint && npm test",
     "smoke:install": "node scripts/smoke-install.mjs",
     "demo": "node src/cli.mjs run --config examples/calculator/contexttest.json",
+    "demo:update": "node scripts/update-demo-output.mjs",
     "doctor": "node src/cli.mjs doctor",
     "prepublishOnly": "npm run check"
   },
