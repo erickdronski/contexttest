@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">ContextTest — Vitest for AGENTS.md</title>
+  <desc id="desc">A dark editorial card showing ContextTest comparing two coding-agent instruction variants and producing a measured result.</desc>
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#172238"/>
+      <stop offset="1" stop-color="#111a2c"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#33405a" stroke-width="1" opacity=".24"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#050914" flood-opacity=".38"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="#0b1020"/>
+  <rect width="1280" height="640" fill="url(#grid)"/>
+  <circle cx="1110" cy="-30" r="350" fill="#174ea6" opacity=".13"/>
+  <circle cx="970" cy="700" r="340" fill="#08775c" opacity=".11"/>
+
+  <g transform="translate(72 64)">
+    <g>
+      <rect width="58" height="58" rx="13" fill="#f7f8fb"/>
+      <path d="M13 14h14v7h-7v17c0 4 3 7 7 7h1v7h-1c-8 0-14-6-14-14V14Z" fill="#101828"/>
+      <path d="M32 14h14v24c0 8-6 14-14 14h-1v-7h1c4 0 7-3 7-7V21h-7v-7Z" fill="#5c8ee6"/>
+      <circle cx="29" cy="29" r="5.5" fill="#43d6b0" stroke="#f7f8fb" stroke-width="3"/>
+      <text x="78" y="37" fill="#f7f8fb" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="25" font-weight="750" letter-spacing="-.5">ContextTest</text>
+    </g>
+
+    <text x="0" y="155" fill="#8fb4ff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" font-weight="700" letter-spacing="2.8">EXPERIMENTS FOR CODING-AGENT INSTRUCTIONS</text>
+    <text x="0" y="216" fill="#f7f8fb" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="52" font-weight="760" letter-spacing="-2.4">Vitest for</text>
+    <text x="0" y="277" fill="#f7f8fb" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="52" font-weight="760" letter-spacing="-2.4">AGENTS.md</text>
+    <path d="M0 309H466" stroke="#33405a"/>
+    <text x="0" y="350" fill="#b4bed2" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="450">Run the same task with two instruction sets.</text>
+    <text x="0" y="382" fill="#f7f8fb" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="680">Measure which one actually works.</text>
+
+    <g transform="translate(0 430)">
+      <rect width="423" height="58" rx="10" fill="#151f33" stroke="#33405a"/>
+      <circle cx="22" cy="29" r="4" fill="#43d6b0"/>
+      <text x="40" y="36" fill="#d8e0ef" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">npx @erickdronski/contexttest init</text>
+    </g>
+  </g>
+
+  <g transform="translate(610 72)" filter="url(#shadow)">
+    <rect width="598" height="496" rx="18" fill="url(#panel)" stroke="#34415b"/>
+    <g transform="translate(28 24)">
+      <circle cx="6" cy="6" r="5" fill="#ff7b72"/>
+      <circle cx="25" cy="6" r="5" fill="#d6a642"/>
+      <circle cx="44" cy="6" r="5" fill="#43d6b0"/>
+      <text x="542" y="11" text-anchor="end" fill="#7e8aa3" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" letter-spacing="1.4">PAIRED RUN / 05</text>
+
+      <text x="0" y="64" fill="#7e8aa3" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="1.8">MEASURED OUTCOME</text>
+      <text x="408" y="64" text-anchor="end" fill="#7e8aa3" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10">WITHOUT</text>
+      <text x="542" y="64" text-anchor="end" fill="#43d6b0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10">WITH</text>
+      <path d="M0 82H542" stroke="#34415b"/>
+
+      <g font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="600" fill="#b4bed2">
+        <text x="0" y="121">Task success</text>
+        <text x="0" y="178">Assertion adherence</text>
+        <text x="0" y="235">Median changed files</text>
+        <text x="0" y="292">Median duration</text>
+      </g>
+      <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="750" text-anchor="end" fill="#9aa6bc">
+        <text x="408" y="121">33%</text>
+        <text x="408" y="178">58%</text>
+        <text x="408" y="235">9</text>
+        <text x="408" y="292">6m 42s</text>
+      </g>
+      <rect x="433" y="90" width="109" height="225" rx="10" fill="#123d38" opacity=".6"/>
+      <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="760" text-anchor="end" fill="#68e2c1">
+        <text x="522" y="121">100%</text>
+        <text x="522" y="178">100%</text>
+        <text x="522" y="235">4</text>
+        <text x="522" y="292">4m 18s</text>
+      </g>
+      <g stroke="#34415b">
+        <path d="M0 139H542"/><path d="M0 196H542"/><path d="M0 253H542"/><path d="M0 315H542"/>
+      </g>
+
+      <g transform="translate(0 347)">
+        <rect width="542" height="92" rx="12" fill="#0c1527" stroke="#34415b"/>
+        <text x="20" y="28" fill="#43d6b0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="800" letter-spacing="1.6">CANDIDATE LEADS</text>
+        <text x="20" y="57" fill="#f7f8fb" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16" font-weight="680">+67 points in task success</text>
+        <text x="522" y="57" text-anchor="end" fill="#7e8aa3" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10">EXACT P=0.125</text>
+      </g>
+    </g>
+  </g>
+
+  <text x="72" y="611" fill="#667085" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" letter-spacing="1.6">LOCAL-FIRST · ZERO DEPENDENCIES · CODEX · CLAUDE CODE · GITHUB ACTION</text>
+</svg>
