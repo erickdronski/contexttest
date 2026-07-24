@@ -4,7 +4,7 @@
   "description": "A/B testing for AGENTS.md and coding-agent instructions.",
   "type": "module",
   "bin": {
-    "contexttest": "./src/cli.mjs"
+    "contexttest": "src/cli.mjs"
   },
   "exports": {
     ".": "./src/index.mjs"
