@@ -59,13 +59,19 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
       onEvent({ type: 'trial:complete', trial, index: jobIndex + 1, total: jobs.length });
       return trial;
     } catch (error) {
-      const trial = { id, task: job.task.name, variant: job.variant.name, attempt: job.attempt, passed: false, score: 0, durationMs: 0, assertions: [{ type: 'infrastructure', pass: false, message: error.message }], files: [], diff: { additions: 0, deletions: 0, total: 0 }, usage: {}, exitCode: 1, timedOut: false, stdout: '', stderr: error.stack ?? error.message };
+      const trial = { id, task: job.task.name, variant: job.variant.name, attempt: job.attempt, passed: false, score: 0, durationMs: 0, infrastructureError: true, assertions: [{ type: 'infrastructure', pass: false, message: error.message }], files: [], diff: { additions: 0, deletions: 0, total: 0 }, usage: {}, exitCode: 1, timedOut: false, stdout: '', stderr: error.stack ?? error.message };
       onEvent({ type: 'trial:error', trial, index: jobIndex + 1, total: jobs.length });
       return trial;
     } finally {
       if (created && !keepWorktrees) await removeWorktree({ repository, destination: worktree, worktreeRoot }).catch(() => {});
     }
   });
+  const infrastructureFailures = trialResults.filter((trial) => trial.infrastructureError);
+  if (infrastructureFailures.length) {
+    if (!keepWorktrees) await rm(worktreeRoot, { recursive: true, force: true }).catch(() => {});
+    const first = infrastructureFailures[0].assertions[0].message;
+    throw new Error(`${infrastructureFailures.length} trial(s) failed before the agent could run. The experiment is invalid.\nFirst failure: ${first}`);
+  }
   const variants = config.variants.map((variant) => {
     const trials = trialResults.filter((trial) => trial.variant === variant.name);
     return { name: variant.name, trials, summary: summarizeTrials(trials) };

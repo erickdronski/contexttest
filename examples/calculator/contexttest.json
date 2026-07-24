@@ -16,7 +16,7 @@
       "prompt": "Add a safe divide function that returns null when the divisor is zero.",
       "mock": { "command": ["node", "examples/calculator/mock-agent.mjs"] },
       "assertions": [
-        { "type": "command", "command": ["node", "--test", "examples/calculator/fixture/test.mjs"] },
+        { "type": "command", "command": ["node", "--test", "examples/calculator/fixture/verify.mjs"] },
         { "type": "allowedPaths", "patterns": ["examples/calculator/fixture/**"] },
         { "type": "maxChangedFiles", "value": 2 },
         { "type": "maxDiffLines", "value": 25 }

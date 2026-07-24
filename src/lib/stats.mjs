@@ -1,8 +1,9 @@
 function values(items, selector) { return items.map(selector).filter(Number.isFinite).sort((a, b) => a - b); }
 export function median(items) {
   if (!items.length) return null;
-  const middle = Math.floor(items.length / 2);
-  return items.length % 2 ? items[middle] : (items[middle - 1] + items[middle]) / 2;
+  const sorted = [...items].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 }
 export function mean(items) { return items.length ? items.reduce((sum, value) => sum + value, 0) / items.length : null; }
 export function wilsonInterval(successes, total, z = 1.96) {
