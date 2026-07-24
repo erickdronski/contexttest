@@ -8,7 +8,7 @@ ContextTest should earn trust through reproducibility, restraint, and clear evid
 2. For substantial behavior or configuration changes, open an issue describing the use case first.
 3. Keep the change focused. Avoid combining refactors with new behavior.
 4. Add tests that fail without the change.
-5. Run `npm run check` and `npm run demo`.
+5. Run `npm run check`, `npm run demo`, and `npm run smoke:install`.
 6. Update the README, schema, and changelog for user-visible changes.
 
 ## Local setup
@@ -18,6 +18,7 @@ git clone https://github.com/erickdronski/contexttest.git
 cd contexttest
 npm test
 npm run demo
+npm run smoke:install
 ```
 
 The project intentionally has no runtime or development dependencies. Node.js 20.11+ and Git are sufficient.

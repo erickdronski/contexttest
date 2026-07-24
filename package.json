@@ -1,6 +1,6 @@
 {
   "name": "@erickdronski/contexttest",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A/B testing for AGENTS.md and coding-agent instructions.",
   "type": "module",
   "bin": {
@@ -24,6 +24,7 @@
     "test:coverage": "node --test --experimental-test-coverage",
     "lint": "node scripts/lint.mjs",
     "check": "npm run lint && npm test",
+    "smoke:install": "node scripts/smoke-install.mjs",
     "demo": "node src/cli.mjs run --config examples/calculator/contexttest.json",
     "doctor": "node src/cli.mjs doctor",
     "prepublishOnly": "npm run check"
@@ -41,6 +42,10 @@
     "ai"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/erickdronski/contexttest.git"

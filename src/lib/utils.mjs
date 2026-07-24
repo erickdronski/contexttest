@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process';
+import { constants } from 'node:fs';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 export const SECRET_NAME = /(api[_-]?key|token|secret|password|passwd|credential|private[_-]?key|auth)/i;
 export const SECRET_VALUE_PATTERNS = [
   /\bsk-[A-Za-z0-9_-]{16,}\b/g,
@@ -16,11 +17,25 @@ export function slug(value) {
 }
 
 export function timestampId(date = new Date()) {
-  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  return date.toISOString().replace(/[-:]/g, '').replace('.', '');
 }
 
 export async function exists(target) {
   try { await access(target); return true; } catch { return false; }
+}
+
+export async function findExecutable(command, environment = process.env, cwd = process.cwd()) {
+  if (!command || typeof command !== 'string') return null;
+  const candidates = [];
+  if (path.isAbsolute(command) || command.includes('/') || command.includes('\\')) candidates.push(path.resolve(cwd, command));
+  else {
+    const extensions = process.platform === 'win32' ? (environment.PATHEXT ?? '.EXE;.CMD;.BAT;.COM').split(';') : [''];
+    for (const directory of (environment.PATH ?? '').split(path.delimiter).filter(Boolean)) for (const extension of extensions) candidates.push(path.join(directory, `${command}${extension}`));
+  }
+  for (const candidate of candidates) {
+    try { await access(candidate, constants.X_OK); return candidate; } catch { /* Continue searching PATH. */ }
+  }
+  return null;
 }
 
 export async function ensureDir(target) {
@@ -71,6 +86,14 @@ export function secretValues(environment) {
   return Object.entries(environment).filter(([name, value]) => SECRET_NAME.test(name) && value).map(([, value]) => String(value));
 }
 
+export function environmentSecrets(config = {}, source = process.env) {
+  const explicit = [
+    ...(config.allow ?? []).map((name) => source[name]),
+    ...Object.values(config.set ?? {}),
+  ].filter((value) => value !== undefined && value !== null).map(String);
+  return [...new Set([...secretValues(source), ...explicit])];
+}
+
 export async function runProcess(command, args = [], options = {}) {
   const started = Date.now();
   const timeoutMs = options.timeoutMs ?? 15 * 60_000;
@@ -78,29 +101,38 @@ export async function runProcess(command, args = [], options = {}) {
     const child = spawn(command, args, {
       cwd: options.cwd,
       env: options.env,
+      detached: process.platform !== 'win32',
       shell: false,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
     let stderr = '';
     let settled = false;
+    let timedOut = false;
     const limit = options.outputLimit ?? 2_000_000;
     const append = (current, chunk) => (current + chunk.toString()).slice(-limit);
     child.stdout.on('data', (chunk) => { stdout = append(stdout, chunk); options.onStdout?.(chunk.toString()); });
     child.stderr.on('data', (chunk) => { stderr = append(stderr, chunk); options.onStderr?.(chunk.toString()); });
     const timer = setTimeout(() => {
       if (!settled) {
-        child.kill('SIGTERM');
-        setTimeout(() => child.kill('SIGKILL'), 2_000).unref();
+        timedOut = true;
+        const kill = (signal) => {
+          try {
+            if (process.platform === 'win32') child.kill(signal);
+            else process.kill(-child.pid, signal);
+          } catch { /* The process may have exited between the timeout and signal. */ }
+        };
+        kill('SIGTERM');
+        setTimeout(() => kill('SIGKILL'), 2_000).unref();
       }
     }, timeoutMs);
     child.on('error', (error) => {
       settled = true; clearTimeout(timer);
-      resolve({ command, args, code: 127, signal: null, stdout, stderr: `${stderr}${error.message}`, durationMs: Date.now() - started, timedOut: false });
+      resolve({ command, args, code: 127, signal: null, stdout, stderr: `${stderr}${error.message}`, durationMs: Date.now() - started, timedOut });
     });
     child.on('close', (code, signal) => {
       settled = true; clearTimeout(timer);
-      resolve({ command, args, code: code ?? 1, signal, stdout, stderr, durationMs: Date.now() - started, timedOut: signal === 'SIGTERM' || signal === 'SIGKILL' });
+      resolve({ command, args, code: code ?? 1, signal, stdout, stderr, durationMs: Date.now() - started, timedOut });
     });
   });
 }

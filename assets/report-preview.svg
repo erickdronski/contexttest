@@ -26,6 +26,6 @@
     </g>
     <g stroke="#d8dee9"><path d="M0 336H1068"/><path d="M0 390H1068"/><path d="M0 444H1068"/><path d="M0 510H1068"/></g>
     <path d="M0 545H1068" stroke="#101828"/>
-    <text x="0" y="580" fill="#08775c" font-family="ui-monospace, monospace" font-size="12" font-weight="700" letter-spacing="1.5">CANDIDATE LEADS · DIRECTIONAL SIGNAL · 5 PAIRED RUNS</text>
+    <text x="0" y="580" fill="#08775c" font-family="ui-monospace, monospace" font-size="12" font-weight="700" letter-spacing="1.5">CANDIDATE LEADS · DIRECTIONAL EVIDENCE · EXACT P=0.125 · 5 PAIRED RUNS</text>
   </g>
 </svg>

@@ -10,6 +10,7 @@
 
 - [ ] `npm run check`
 - [ ] `npm run demo`
+- [ ] `npm run smoke:install`
 - [ ] README, schema, and changelog updated when needed
 - [ ] Security implications considered for commands, environment, paths, worktrees, and reports
 

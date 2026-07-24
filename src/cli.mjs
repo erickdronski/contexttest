@@ -3,8 +3,9 @@ import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createStarterConfig, loadConfig } from './lib/config.mjs';
 import { runExperiment } from './lib/engine.mjs';
+import { assertGitRepository, currentCommit } from './lib/git.mjs';
 import { renderHtmlReport, renderTerminalReport } from './lib/reporter.mjs';
-import { exists, parseArgs, VERSION, writeJson } from './lib/utils.mjs';
+import { exists, findExecutable, isPathInside, parseArgs, runProcess, VERSION, writeJson } from './lib/utils.mjs';
 
 const HELP = `
 ContextTest — A/B testing for coding-agent instructions
@@ -67,18 +68,48 @@ async function run(flags) {
 async function doctor(flags) {
   const checks = [];
   const checkExecutable = async (name) => {
-    const result = await import('./lib/utils.mjs').then(({ runProcess }) => runProcess(name, ['--version'], { timeoutMs: 10_000, env: process.env }));
-    checks.push({ name, pass: result.code === 0, detail: result.code === 0 ? (result.stdout || result.stderr).trim().split('\n')[0] : 'not found' });
+    const executable = await findExecutable(name);
+    if (!executable) { checks.push({ name, pass: false, detail: 'not found on PATH' }); return; }
+    const result = await runProcess(executable, ['--version'], { timeoutMs: 10_000, env: process.env });
+    checks.push({ name, pass: true, detail: result.code === 0 ? (result.stdout || result.stderr).trim().split('\n')[0] : executable });
   };
   await checkExecutable('git');
   let loaded;
   try { loaded = await loadConfig(process.cwd(), flags.config); checks.push({ name: 'configuration', pass: true, detail: loaded.configPath }); }
   catch (error) { checks.push({ name: 'configuration', pass: false, detail: error.message }); }
+  if (loaded) {
+    let repository;
+    try { repository = await assertGitRepository(loaded.root); checks.push({ name: 'repository', pass: true, detail: repository }); }
+    catch (error) { checks.push({ name: 'repository', pass: false, detail: error.message }); }
+    if (repository) {
+      const status = await runProcess('git', ['status', '--porcelain'], { cwd: repository, env: process.env, timeoutMs: 10_000 });
+      checks.push({ name: 'committed base', pass: true, warn: Boolean(status.stdout.trim()), detail: status.stdout.trim() ? 'working-tree changes are excluded from experiments' : 'working tree is clean' });
+      for (const task of loaded.config.tasks) {
+        try {
+          const commit = await currentCommit(repository, task.ref ?? loaded.config.baseRef ?? 'HEAD');
+          checks.push({ name: `ref:${task.name}`, pass: true, detail: commit.slice(0, 12) });
+        } catch { checks.push({ name: `ref:${task.name}`, pass: false, detail: `cannot resolve ${task.ref ?? loaded.config.baseRef ?? 'HEAD'}` }); }
+      }
+    }
+    for (const variant of loaded.config.variants.filter((item) => item.source)) {
+      const source = path.resolve(loaded.root, variant.source);
+      const pass = isPathInside(loaded.root, source) && await exists(source);
+      checks.push({ name: `variant:${variant.name}`, pass, detail: pass ? variant.source : `${variant.source} not found` });
+    }
+    for (const command of loaded.config.setup?.commands ?? []) {
+      const executable = await findExecutable(command[0]);
+      checks.push({ name: `setup:${command[0]}`, pass: Boolean(executable), detail: executable ?? 'not found on PATH' });
+    }
+  }
   if (loaded?.config.agent.provider === 'codex') await checkExecutable(loaded.config.agent.executable ?? 'codex');
   if (loaded?.config.agent.provider === 'claude') await checkExecutable(loaded.config.agent.executable ?? 'claude');
   if (loaded?.config.agent.provider === 'command') await checkExecutable(loaded.config.agent.command[0]);
+  if (loaded?.config.agent.provider === 'mock') for (const task of loaded.config.tasks) {
+    const executable = await findExecutable(task.mock.command[0]);
+    checks.push({ name: `mock:${task.name}`, pass: Boolean(executable), detail: executable ?? `${task.mock.command[0]} not found on PATH` });
+  }
   log('\nCONTEXTTEST / DOCTOR\n');
-  for (const check of checks) log(`${check.pass ? '✓' : '×'} ${check.name.padEnd(16)} ${check.detail}`);
+  for (const check of checks) log(`${!check.pass ? '×' : check.warn ? '!' : '✓'} ${check.name.padEnd(16)} ${check.detail}`);
   if (checks.some((check) => !check.pass)) process.exitCode = 1;
 }
 

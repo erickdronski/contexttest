@@ -1,10 +1,17 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { changedFiles, diffStats } from './git.mjs';
 import { matchesAny } from './glob.mjs';
-import { exists, isPathInside, runProcess, safeEnvironment } from './utils.mjs';
+import { environmentSecrets, exists, isPathInside, redact, runProcess, safeEnvironment } from './utils.mjs';
 
 function result(type, pass, message, details = {}) { return { type, pass, message, ...details }; }
+
+async function resolvesInside(root, target) {
+  try {
+    const [realRoot, realTarget] = await Promise.all([realpath(root), realpath(target)]);
+    return isPathInside(realRoot, realTarget);
+  } catch { return false; }
+}
 
 export async function evaluateAssertions({ assertions = [], worktree, agentResult, environment }) {
   const files = await changedFiles(worktree);
@@ -16,8 +23,13 @@ export async function evaluateAssertions({ assertions = [], worktree, agentResul
         const command = Array.isArray(assertion.command) ? assertion.command : [];
         if (!command.length) { results.push(result('command', false, 'Command assertion requires an argument array.')); break; }
         const [executable, ...args] = command;
-        const execution = await runProcess(executable, args, { cwd: worktree, env: safeEnvironment(environment), timeoutMs: (assertion.timeoutMinutes ?? 10) * 60_000 });
-        results.push(result('command', execution.code === (assertion.exitCode ?? 0), `${command.join(' ')} ${execution.code === (assertion.exitCode ?? 0) ? 'passed' : `exited ${execution.code}`}.`, { actual: execution.code, expected: assertion.exitCode ?? 0, durationMs: execution.durationMs, stdout: execution.stdout.slice(-4000), stderr: execution.stderr.slice(-4000) }));
+        const env = safeEnvironment(environment);
+        const secrets = environmentSecrets(environment, { ...process.env, ...env });
+        const execution = await runProcess(executable, args, { cwd: worktree, env, timeoutMs: (assertion.timeoutMinutes ?? 10) * 60_000 });
+        const passed = execution.code === (assertion.exitCode ?? 0) && !execution.timedOut;
+        const label = assertion.label || executable;
+        const outcome = execution.timedOut ? 'timed out' : passed ? 'passed' : `exited ${execution.code}`;
+        results.push(result('command', passed, `${label} ${outcome}.`, { actual: execution.code, expected: assertion.exitCode ?? 0, durationMs: execution.durationMs, timedOut: execution.timedOut, stdout: redact(execution.stdout.slice(-4000), secrets), stderr: redact(execution.stderr.slice(-4000), secrets) }));
         break;
       }
       case 'maxChangedFiles': results.push(result(assertion.type, files.length <= assertion.value, `${files.length} changed file${files.length === 1 ? '' : 's'}; limit ${assertion.value}.`, { actual: files.length, expected: assertion.value })); break;
@@ -33,7 +45,7 @@ export async function evaluateAssertions({ assertions = [], worktree, agentResul
       }
       case 'requiredFile': {
         const target = path.resolve(worktree, assertion.path);
-        const pass = isPathInside(worktree, target) && await exists(target);
+        const pass = isPathInside(worktree, target) && await exists(target) && await resolvesInside(worktree, target);
         results.push(result(assertion.type, pass, pass ? `${assertion.path} exists.` : `${assertion.path} is missing.`)); break;
       }
       case 'forbiddenFile': {
@@ -44,7 +56,7 @@ export async function evaluateAssertions({ assertions = [], worktree, agentResul
       case 'fileContains': {
         const target = path.resolve(worktree, assertion.path);
         let content = '';
-        if (isPathInside(worktree, target) && await exists(target)) content = await readFile(target, 'utf8');
+        if (isPathInside(worktree, target) && await exists(target) && await resolvesInside(worktree, target)) content = await readFile(target, 'utf8');
         const pass = content.includes(assertion.value);
         results.push(result(assertion.type, pass, pass ? `${assertion.path} contains the expected text.` : `${assertion.path} does not contain the expected text.`)); break;
       }

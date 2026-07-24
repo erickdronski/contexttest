@@ -26,6 +26,7 @@ ContextTest replaces intuition with an experiment. It gives Codex or Claude Code
 ```text
                          without        with
 Task success             33%            100%
+95% confidence interval  8%–73%         57%–100%
 Assertion adherence      58%            100%
 Median duration          6m 42s         4m 18s
 Median changed files     9              4
@@ -33,7 +34,7 @@ Median diff lines        184            71
 
 VERDICT  WITH LEADS
 67 percentage-point difference in task success.
-Signal: directional; 5 paired attempts per variant.
+Evidence: directional; 5 paired runs; exact p=0.125.
 ```
 
 ## Why this exists
@@ -61,6 +62,7 @@ npx @erickdronski/contexttest init
 Edit the generated `contexttest.json` and `AGENTS.candidate.md`, then run:
 
 ```bash
+npx @erickdronski/contexttest doctor
 npx @erickdronski/contexttest run --attempts 5
 ```
 
@@ -88,6 +90,10 @@ No account, server, database, or telemetry is involved. Reports remain local, bu
     "attempts": 5,
     "concurrency": 2
   },
+  "setup": {
+    "commands": [["npm", "ci", "--ignore-scripts"]],
+    "timeoutMinutes": 10
+  },
   "environment": {
     "inherit": false,
     "allow": []
@@ -114,17 +120,32 @@ No account, server, database, or telemetry is involved. Reports remain local, bu
 
 Variant paths are relative to the configuration file. Task commands and assertion paths run from the repository root inside each trial worktree.
 
+Setup commands run in every fresh worktree before the trial baseline is recorded. Use them for dependencies, generated fixtures, or other preparation that every variant needs. Their filesystem changes are excluded from agent metrics; a setup failure invalidates the experiment instead of counting as an agent failure.
+
+ContextTest always evaluates committed Git content. `contexttest doctor` warns when your working tree is dirty because uncommitted product code, tasks, or instruction files will not be present in detached trial worktrees.
+
+## Design an experiment worth trusting
+
+1. Change one instruction idea at a time. A candidate that rewrites everything may win, but it will not tell you why.
+2. Choose three to ten tasks that represent recurring repository work: a bug fix, a constrained refactor, a test addition, or a documentation change with executable checks.
+3. Write prompts that describe the job, not the expected patch. Both variants must receive exactly the same prompt.
+4. Prefer assertions that encode mergeability: targeted tests, allowed paths, protected public APIs, and bounded diffs.
+5. Start with one attempt to debug the harness. Move to at least five paired runs for a directional comparison and more when the decision matters.
+6. Re-run on another commit or day before turning a result into permanent repository policy.
+
+Historical bugs make strong tasks when you reset to the parent of the fixing commit and write assertions from the regression test. Never include the original fix in the worktree being evaluated.
+
 ## Commands
 
 ```bash
 contexttest init                         # create a starter experiment
 contexttest run                          # run every configured task
 contexttest run --task pagination        # run one task
-contexttest run --attempts 10             # override repetitions
-contexttest run --keep-worktrees          # retain trial worktrees for debugging
-contexttest run --json                     # emit the report as one JSON line
-contexttest doctor                        # verify Git, config, and agent CLI
-contexttest report path/report.json       # regenerate the HTML report
+contexttest run --attempts 10            # override repetitions
+contexttest run --keep-worktrees         # retain trial worktrees for debugging
+contexttest run --json                   # emit the report as one JSON line
+contexttest doctor                       # verify config, refs, files, tools, and Git state
+contexttest report path/report.json      # regenerate the HTML report
 ```
 
 Exit codes:
@@ -141,7 +162,7 @@ Every run implicitly asserts that the agent exits successfully. Add deterministi
 
 | Type | Purpose |
 |---|---|
-| `command` | Run an argument-array command and check its exit code |
+| `command` | Run an argument-array command and check its exit code or timeout |
 | `maxChangedFiles` / `minChangedFiles` | Bound the size of the change |
 | `maxDiffLines` | Bound added and deleted lines |
 | `allowedPaths` | Require every changed path to match a glob |
@@ -151,6 +172,12 @@ Every run implicitly asserts that the agent exits successfully. Add deterministi
 | `stdoutContains` / `stdoutNotContains` | Check the agent's final output |
 
 ContextTest supports `*`, `**`, and `?` in path globs.
+
+Give command assertions a safe display label when their arguments contain sensitive or noisy values:
+
+```json
+{ "type": "command", "label": "unit tests", "command": ["npm", "test"], "timeoutMinutes": 10 }
+```
 
 ## Agent providers
 
@@ -202,17 +229,17 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
       - uses: erickdronski/contexttest@v0
         id: experiment
         with:
           attempts: 5
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: contexttest-report
@@ -232,6 +259,7 @@ ContextTest therefore:
 - Strips environment variables except a small runtime allowlist
 - Requires explicit opt-in for API keys and other credentials
 - Redacts common token formats and allowlisted secret values from reports
+- Redacts agent output and assertion-command diagnostics before they enter reports
 - Avoids shell interpolation for agent and assertion commands
 - Bounds retained output and subprocess runtime
 - Refuses to delete paths outside its generated worktree directory
@@ -244,12 +272,19 @@ Redaction is defense in depth, not a guarantee. ContextTest excludes the configu
 
 Coding-agent behavior is stochastic. One run is a story, not a measurement.
 
-- `1–2` paired attempts: anecdotal
-- `3–4`: early signal
-- `5–9`: directional
-- `10+`: stronger evidence
+- Each baseline run is paired with the candidate run for the same task and attempt.
+- Pass rates include Wilson 95% confidence intervals.
+- Pass/fail disagreements use a two-sided exact paired test; the report exposes its p-value instead of hiding uncertainty behind a score.
+- `1–2` pairs are labeled anecdotal and `3–4` early regardless of effect size.
+- At five or more pairs, evidence remains directional until the paired p-value is at most `0.05`; `p ≤ 0.01` is labeled strong.
 
-ContextTest includes 95% Wilson intervals for pass rates in JSON. It deliberately does not print “statistically significant” from small experiments. Tasks should represent real repository work, assertions should be deterministic, and conclusions should be replicated across more than one task.
+The verdict is a practical leader, not a universal truth. It first considers a material task-success difference, then assertion adherence, then duration only when success is equal. The report also breaks results down by task so an aggregate win cannot quietly hide a task-specific regression. Tasks should represent real repository work, assertions should be deterministic, and conclusions should be replicated across repositories or task families.
+
+The JSON report records resolved task commits, a configuration digest, runtime metadata, setup count, every trial, and the paired contingency table. It deliberately excludes prompts and instruction contents.
+
+## Experimental limits
+
+Detached worktrees isolate repository changes, not the rest of the machine. Agent accounts, provider availability, network responses, package caches, MCP servers, and model versions can all change between runs. Concurrency can also introduce shared-cache contention. Use low concurrency for latency comparisons, pin models where providers allow it, keep setup deterministic, and replicate important conclusions on another day.
 
 ## Deterministic demo
 

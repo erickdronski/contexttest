@@ -25,3 +25,59 @@ test('bounds concurrency and attempts', () => {
   assert.match(errors, /attempts/);
   assert.match(errors, /concurrency/);
 });
+
+test('rejects names that collide directly or after slug normalization', () => {
+  const config = createStarterConfig();
+  config.variants[1].name = config.variants[0].name;
+  config.tasks.push({ ...config.tasks[0], name: 'focused change' });
+  const errors = validateConfig(config).join('\n');
+  assert.match(errors, /variant names must be unique/);
+  assert.match(errors, /task names must remain unique/);
+});
+
+test('rejects unsafe paths and malformed assertions before a paid run', () => {
+  const config = createStarterConfig();
+  config.instructionFile = '../AGENTS.md';
+  config.variants[1].source = '/tmp/instructions.md';
+  config.tasks[0].assertions = [
+    { type: 'command', command: 'npm test' },
+    { type: 'allowedPaths', patterns: [] },
+    { type: 'fileContains', path: '../../secret', value: '' },
+    { type: 'imaginary' },
+  ];
+  const errors = validateConfig(config).join('\n');
+  assert.match(errors, /instructionFile/);
+  assert.match(errors, /source/);
+  assert.match(errors, /command must be/);
+  assert.match(errors, /patterns/);
+  assert.match(errors, /path must be relative/);
+  assert.match(errors, /not supported/);
+});
+
+test('validates setup commands and provider-specific mock commands', () => {
+  const config = createStarterConfig();
+  config.agent = { provider: 'mock', timeoutMinutes: -1 };
+  config.setup = { commands: [['npm', 'ci'], []], timeoutMinutes: 0 };
+  const errors = validateConfig(config).join('\n');
+  assert.match(errors, /agent.timeoutMinutes/);
+  assert.match(errors, /mock.command/);
+  assert.match(errors, /setup.commands\[1\]/);
+  assert.match(errors, /setup.timeoutMinutes/);
+});
+
+test('returns useful errors for structurally malformed JSON without throwing', () => {
+  const config = createStarterConfig();
+  config.extraTypo = true;
+  config.agent = [];
+  config.trials = [];
+  config.environment = 'all';
+  config.variants = [null, 7];
+  config.tasks = [null];
+  const errors = validateConfig(config).join('\n');
+  assert.match(errors, /Unknown top-level property/);
+  assert.match(errors, /agent must be an object/);
+  assert.match(errors, /trials must be an object/);
+  assert.match(errors, /environment must be an object/);
+  assert.match(errors, /variants\[0\] must be an object/);
+  assert.match(errors, /tasks\[0\] must be an object/);
+});
