@@ -1,0 +1,31 @@
+name: ContextTest
+description: A/B test AGENTS.md and coding-agent instructions in isolated Git worktrees.
+author: Erick Dronski
+branding:
+  icon: activity
+  color: blue
+inputs:
+  config:
+    description: Path to contexttest.json.
+    required: false
+    default: contexttest.json
+  task:
+    description: Optional task name to run.
+    required: false
+  attempts:
+    description: Optional number of attempts per variant.
+    required: false
+  report-dir:
+    description: Directory for report.json and report.html.
+    required: false
+    default: contexttest-report
+outputs:
+  winner:
+    description: candidate, baseline, or tie.
+  report-json:
+    description: Absolute path to the JSON report.
+  report-html:
+    description: Absolute path to the standalone HTML report.
+runs:
+  using: node20
+  main: src/action.mjs

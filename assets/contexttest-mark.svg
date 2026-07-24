@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" role="img" aria-labelledby="title desc">
+  <title id="title">ContextTest</title><desc id="desc">Two experimental tracks converging on a measured result.</desc>
+  <rect width="112" height="112" rx="22" fill="#101828"/>
+  <path d="M25 27h25v12H37v34c0 7 5 12 12 12h1v12h-1c-14 0-24-10-24-24V27Z" fill="#F7F8FB"/>
+  <path d="M62 27h25v46c0 14-10 24-24 24h-1V85h1c7 0 12-5 12-12V39H62V27Z" fill="#5C8EE6"/>
+  <circle cx="56" cy="56" r="9" fill="#43D6B0" stroke="#101828" stroke-width="5"/>
+</svg>

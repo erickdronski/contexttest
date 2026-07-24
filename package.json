@@ -1,0 +1,48 @@
+{
+  "name": "@erickdronski/contexttest",
+  "version": "0.1.0",
+  "description": "A/B testing for AGENTS.md and coding-agent instructions.",
+  "type": "module",
+  "bin": {
+    "contexttest": "./src/cli.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "files": [
+    "src",
+    "action.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "lint": "node scripts/lint.mjs",
+    "check": "npm run lint && npm test",
+    "demo": "node src/cli.mjs run --config examples/calculator/contexttest.json",
+    "doctor": "node src/cli.mjs doctor",
+    "prepublishOnly": "npm run check"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "keywords": [
+    "agents-md",
+    "claude-code",
+    "codex",
+    "coding-agent",
+    "evaluation",
+    "benchmark",
+    "ai"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/erickdronski/contexttest.git"
+  },
+  "bugs": {
+    "url": "https://github.com/erickdronski/contexttest/issues"
+  },
+  "homepage": "https://github.com/erickdronski/contexttest#readme"
+}

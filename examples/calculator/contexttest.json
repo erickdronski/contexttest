@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "project": "calculator-demo",
+  "baseRef": "HEAD",
+  "instructionFile": "AGENTS.md",
+  "agent": { "provider": "mock", "timeoutMinutes": 1 },
+  "trials": { "attempts": 3, "concurrency": 2 },
+  "environment": { "inherit": false },
+  "variants": [
+    { "name": "without-instructions", "disabled": true },
+    { "name": "with-instructions", "source": "AGENTS.candidate.md" }
+  ],
+  "tasks": [
+    {
+      "name": "safe-division",
+      "prompt": "Add a safe divide function that returns null when the divisor is zero.",
+      "mock": { "command": ["node", "examples/calculator/mock-agent.mjs"] },
+      "assertions": [
+        { "type": "command", "command": ["node", "--test", "examples/calculator/fixture/test.mjs"] },
+        { "type": "allowedPaths", "patterns": ["examples/calculator/fixture/**"] },
+        { "type": "maxChangedFiles", "value": 2 },
+        { "type": "maxDiffLines", "value": 25 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose a concrete experiment or verification capability.
+title: "idea: "
+labels: [enhancement, triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What experiment cannot you run today?
+      description: Describe the decision you need ContextTest to support.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: What evidence should the feature produce?
+    validations:
+      required: true
+  - type: textarea
+    id: alternative
+    attributes:
+      label: Current workaround
