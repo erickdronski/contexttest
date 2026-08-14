@@ -81,6 +81,7 @@ tools cover the rest of the loop, and all three are standalone:
 | [burnrate](https://github.com/erickdronski/burnrate) | **Price** it — what the runs cost, with a hard spend cap |
 | [tripwire](https://github.com/erickdronski/tripwire) | **Audit** it — what the agent is actually allowed to reach |
 | [gtm-skills](https://github.com/erickdronski/gtm-skills) | Go-to-market skills for agents, on a tested arithmetic engine |
+| [contexttest-findings](https://github.com/erickdronski/contexttest-findings) | Measured results for common `AGENTS.md` rules, produced with this tool |
 
 The natural sequence is: generate a baseline with `agentsmith`, edit it, prove
 the edit with ContextTest, and watch what the experiment costs with `burnrate`.
