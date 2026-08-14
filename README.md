@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/erickdronski/contexttest/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/erickdronski/contexttest/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://www.npmjs.com/package/@erickdronski/contexttest"><img alt="npm" src="https://img.shields.io/npm/v/@erickdronski/contexttest?color=174ea6"></a>
+  <a href="package.json"><img alt="zero dependencies" src="https://img.shields.io/badge/dependencies-0-08775c"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-101828"></a>
   <a href="SECURITY.md"><img alt="Security policy" src="https://img.shields.io/badge/security-policy-08775c"></a>
 </p>
@@ -79,6 +79,8 @@ tools cover the rest of the loop, and all three are standalone:
 | [agentsmith](https://github.com/erickdronski/agentsmith) | **Write** the file — derives an `AGENTS.md` from what your repo actually does, and detects drift in CI |
 | **ContextTest** | **Test** it — does the change measurably improve task completion? |
 | [burnrate](https://github.com/erickdronski/burnrate) | **Price** it — what the runs cost, with a hard spend cap |
+| [tripwire](https://github.com/erickdronski/tripwire) | **Audit** it — what the agent is actually allowed to reach |
+| [gtm-skills](https://github.com/erickdronski/gtm-skills) | Go-to-market skills for agents, on a tested arithmetic engine |
 
 The natural sequence is: generate a baseline with `agentsmith`, edit it, prove
 the edit with ContextTest, and watch what the experiment costs with `burnrate`.
@@ -112,14 +114,18 @@ CI runs the check and installation smoke test on Node 20, 22, and 24, plus an Ac
 Requirements: Node.js 20.11+, Git, and either Codex CLI or Claude Code installed and authenticated.
 
 ```bash
-npx @erickdronski/contexttest init
+npx github:erickdronski/contexttest init
 ```
+
+Installing from the git URL is the supported path today — this is not on npm
+yet. When it is published the package name will be `@erickdronski/contexttest`.
+
 
 Edit the generated `contexttest.json` and `AGENTS.candidate.md`, then run:
 
 ```bash
-npx @erickdronski/contexttest doctor
-npx @erickdronski/contexttest run --attempts 5
+npx github:erickdronski/contexttest doctor
+npx github:erickdronski/contexttest run --attempts 5
 ```
 
 ContextTest writes two artifacts under `.contexttest/reports/<run>/`:
