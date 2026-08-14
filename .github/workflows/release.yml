@@ -1,31 +1,46 @@
+# Cut a release from a version tag.
+#
+#   git tag v0.2.0 && git push --tags
+#
+# The build job always runs: tests, lint, and a packing check. Publishing to
+# npm is gated on a repository variable so a tag produces a green build and a
+# GitHub Release before npm is configured, rather than a permanently red X.
+#
+# To turn publishing on: add an NPM_TOKEN secret and set the repository
+# variable PUBLISH_TO_NPM=true.
 name: Release
+
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
-  npm:
+  build:
     runs-on: ubuntu-latest
-    env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-      - run: npm ci --ignore-scripts
-      - run: npm run check
-      - name: Publish to npm
-        if: env.NPM_TOKEN != ''
-        run: npm publish --access public --provenance
+          node-version: "22"
+      - run: npm test
+      - run: node scripts/lint.mjs
+      - name: Verify the package contents
+        run: npm pack --dry-run
+
+  publish:
+    needs: build
+    if: vars.PUBLISH_TO_NPM == 'true' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
-      - name: Explain skipped npm publish
-        if: env.NPM_TOKEN == ''
-        run: echo "::notice title=npm publish skipped::Add the NPM_TOKEN repository secret to publish future releases."
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
