@@ -24,9 +24,13 @@
 
 ---
 
-You changed `AGENTS.md`. Did the agent get better—or did you add 200 lines of expensive reassurance?
+You changed `AGENTS.md`. Did the agent get better — or did you add 200 lines of expensive reassurance?
 
-ContextTest replaces intuition with an experiment. It gives Codex or Claude Code the same tasks from the same Git commit, runs each attempt in a detached worktree, verifies the result with deterministic assertions, and produces an evidence-backed comparison.
+Nobody knows, because nobody measures it. Instruction files are edited by
+intuition and defended by anecdote, and the only feedback loop is a vague sense
+that things feel better.
+
+ContextTest replaces that with an experiment. It gives Codex or Claude Code the same tasks from the same Git commit, runs each attempt in a detached worktree, verifies the result with deterministic assertions, and produces an evidence-backed comparison.
 
 <p align="center">
   <img src="assets/report-preview.svg" width="100%" alt="ContextTest report comparing a baseline with a candidate instruction file">
@@ -63,6 +67,21 @@ Use it to answer:
 - Do nested repository rules work for the tasks they govern?
 
 See the [use-case and decision guide](docs/USE-CASES.md) for concrete experiment designs, adoption patterns, and the questions this tool cannot answer.
+
+
+### Where this sits
+
+ContextTest measures whether an instruction file changes behavior. Two sibling
+tools cover the rest of the loop, and all three are standalone:
+
+| Tool | Job |
+|---|---|
+| [agentsmith](https://github.com/erickdronski/agentsmith) | **Write** the file — derives an `AGENTS.md` from what your repo actually does, and detects drift in CI |
+| **ContextTest** | **Test** it — does the change measurably improve task completion? |
+| [burnrate](https://github.com/erickdronski/burnrate) | **Price** it — what the runs cost, with a hard spend cap |
+
+The natural sequence is: generate a baseline with `agentsmith`, edit it, prove
+the edit with ContextTest, and watch what the experiment costs with `burnrate`.
 
 ## How it works
 
