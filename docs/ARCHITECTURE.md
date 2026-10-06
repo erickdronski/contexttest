@@ -55,7 +55,7 @@ sequenceDiagram
 
 Setup happens before the trial baseline is recorded, so dependency installation or fixture generation is not attributed to the agent's changed-file and diff metrics.
 
-The bridge step exists because agents load different files on their own. Claude Code reads `CLAUDE.md`, not `AGENTS.md`, so for an `AGENTS.md` treatment every Claude Code arm—with or without instructions—gets the same `CLAUDE.md` import line. Like the instruction file itself, the bridge is part of the trial baseline, not of the agent's change. An agent that exits before its first turn, or an executable that cannot start, is an infrastructure failure: the experiment is invalidated instead of scoring a run that never happened.
+The bridge step exists because agents load different files on their own. Claude Code reads `CLAUDE.md`, not `AGENTS.md`, so for an `AGENTS.md` treatment every Claude Code arm—with or without instructions—gets the same `CLAUDE.md` import line. An arm without instructions gets an empty `AGENTS.md` as well, so the import resolves to nothing rather than to a missing file the agent might go looking for. Like the instruction file itself, the bridge and that empty file are part of the trial baseline, not of the agent's change. An agent that exits before its first turn, or an executable that cannot start, is an infrastructure failure: the experiment is invalidated instead of scoring a run that never happened.
 
 ## Components and responsibilities
 

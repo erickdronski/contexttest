@@ -27,13 +27,22 @@ if (model === 'not-a-model') {
   process.stdout.write('[claude-code:unrecognized_model]\n' + JSON.stringify({ type: 'result', is_error: true, num_turns: 0, usage: { input_tokens: 0, output_tokens: 0 } }));
   process.exit(1);
 }
-const load = (file) => existsSync(file) ? readFileSync(file, 'utf8').split('\n').map((line) => /^@\S+$/.test(line.trim()) ? load(path.resolve(path.dirname(file), line.trim().slice(1))) : line).join('\n') : '';
+// Like Claude Code 2.1.272, a dangling @import is not an error, but the model
+// notices it and spends an extra turn looking for the missing file.
+const imports = [];
+const load = (file) => existsSync(file) ? readFileSync(file, 'utf8').split('\n').map((line) => {
+  if (!/^@\S+$/.test(line.trim())) return line;
+  const target = path.resolve(path.dirname(file), line.trim().slice(1));
+  imports.push({ target: path.relative(process.cwd(), target), exists: existsSync(target), bytes: existsSync(target) ? readFileSync(target).length : null });
+  return load(target);
+}).join('\n') : '';
 // FAKE_CLAUDE_DEAF reproduces the original bug: the agent reads nothing.
 const memory = process.env.FAKE_CLAUDE_DEAF === '1' ? '' : load('CLAUDE.md');
 writeFileSync('value.txt', memory.includes('MAKE_GOOD_CHANGE') ? 'expected\n' : 'wrong\n');
-const turns = 3;
+const dangling = imports.filter((entry) => !entry.exists).map((entry) => entry.target);
+const turns = 3 + (dangling.length ? 1 : 0);
 const perRequest = 20000 + Math.round(Buffer.byteLength(memory) / 4);
-process.stdout.write(JSON.stringify({ type: 'result', num_turns: turns, total_cost_usd: 0.01, args: args.filter((arg) => arg.startsWith('--')), usage: { input_tokens: 12 * turns, cache_read_input_tokens: (perRequest - 12) * turns, cache_creation_input_tokens: 0, output_tokens: 10 } }));
+process.stdout.write(JSON.stringify({ type: 'result', num_turns: turns, total_cost_usd: 0.01, imports, result: dangling.length ? 'Note: CLAUDE.md imports ' + dangling.join(', ') + ", which doesn't exist." : 'Done.', args: args.filter((arg) => arg.startsWith('--')), usage: { input_tokens: 12 * turns, cache_read_input_tokens: (perRequest - 12) * turns, cache_creation_input_tokens: 0, output_tokens: 10 } }));
 `;
 
 async function git(root, ...args) {
@@ -72,11 +81,17 @@ test('Claude Code receives AGENTS.md through a CLAUDE.md import in every arm', {
   const root = await repository();
   const report = await runExperiment({ config: claudeConfig(await fakeClaude()), root });
   assert.equal(report.comparison.winner, 'candidate', 'the treatment must reach an agent that only reads CLAUDE.md');
+  assert.deepEqual(report.variants[0].delivery, { file: 'AGENTS.md', method: 'bridged', bridgedVia: 'CLAUDE.md @import', emptyTargetForDisabledArm: true });
+  assert.deepEqual(report.variants[1].delivery, { file: 'AGENTS.md', method: 'bridged', bridgedVia: 'CLAUDE.md @import' });
   for (const variant of report.variants) {
-    assert.deepEqual(variant.delivery, { file: 'AGENTS.md', method: 'bridged', bridgedVia: 'CLAUDE.md @import' });
     assert.equal(variant.trials[0].bridge, 'created', 'the arm without instructions gets the same bridge');
-    assert.deepEqual(variant.trials[0].files, ['value.txt'], 'the bridge is not an agent change');
+    assert.deepEqual(variant.trials[0].files, ['value.txt'], 'neither the bridge nor the empty target is an agent change');
   }
+  const seen = report.variants.map((variant) => JSON.parse(variant.trials[0].stdout));
+  assert.deepEqual(seen[0].imports, [{ target: 'AGENTS.md', exists: true, bytes: 0 }], 'the import resolves to an empty file, not a missing one');
+  assert.equal(seen[1].imports[0].exists, true);
+  assert.deepEqual(seen.map((result) => [result.num_turns, result.result]), [[3, 'Done.'], [3, 'Done.']], 'no arm spends a turn on a dangling import');
+  assert.match(renderTerminalReport(report, { color: false }), /Instruction delivery +via CLAUDE\.md @import \(empty AGENTS\.md\) +via CLAUDE\.md @import/);
   assert.equal(report.comparison.treatmentDelivery, 'consistent');
   assert.equal(report.comparison.deliveryCheck.basis, 'request');
   assert.deepEqual(report.warnings, []);
@@ -141,7 +156,7 @@ test('doctor warns that Claude Code needs a bridge and that a base CLAUDE.md rea
   const root = await repository({ 'CLAUDE.md': '# Shared rules\n' });
   await writeFile(path.join(root, 'contexttest.json'), `${JSON.stringify(claudeConfig(await fakeClaude()), null, 2)}\n`);
   const { stdout } = await exec(process.execPath, [cli, 'doctor'], { cwd: root });
-  assert.match(stdout, /! delivery +Claude Code does not read AGENTS\.md; every arm gets CLAUDE\.md @import/);
+  assert.match(stdout, /! delivery +Claude Code does not read AGENTS\.md; every arm gets CLAUDE\.md @import so the treatment reaches it, and an arm without instructions gets an empty AGENTS\.md/);
   assert.match(stdout, /! delivery +HEAD already has CLAUDE\.md: its rules reach every arm/);
   assert.match(stdout, /! isolation +your user settings, plugins, hooks, and MCP servers load into every trial/);
   assert.equal(await readFile(path.join(root, 'CLAUDE.md'), 'utf8'), '# Shared rules\n', 'doctor never edits the repository');
@@ -174,4 +189,14 @@ test('ablation arms reach Claude Code through the same bridge', { skip }, async 
   assert.deepEqual(report.effects.map((effect) => effect.reading), ['no clear effect', 'helps']);
   assert.ok(report.invocation.args.includes('--strict-mcp-config'));
   assert.equal(report.runtime.agents[0].version, '9.9.9 (Fake Claude Code)');
+});
+
+test('the fake agent reproduces the dangling-import canary the empty target prevents', { skip }, async () => {
+  const worktree = await mkdtemp(path.join(os.tmpdir(), 'contexttest-dangling-'));
+  await writeFile(path.join(worktree, 'CLAUDE.md'), '@AGENTS.md\n');
+  const { stdout } = await exec(await fakeClaude(), ['-p', 'x'], { cwd: worktree });
+  const result = JSON.parse(stdout);
+  assert.deepEqual(result.imports, [{ target: 'AGENTS.md', exists: false, bytes: null }]);
+  assert.equal(result.num_turns, 4, 'a dangling import costs a turn, as it did on Claude Code 2.1.272');
+  assert.match(result.result, /imports AGENTS\.md, which doesn't exist/);
 });

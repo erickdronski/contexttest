@@ -164,7 +164,7 @@ async function doctor(flags) {
       if (delivery.method === 'native') checks.push({ name: 'delivery', pass: true, detail: `${delivery.file} is loaded natively by ${provider}` });
       if (delivery.method === 'unverified') checks.push({ name: 'delivery', pass: true, warn: true, detail: deliveryWarning(provider, delivery) });
       if (delivery.method === 'bridged') {
-        checks.push({ name: 'delivery', pass: true, warn: true, detail: `Claude Code does not read ${delivery.file}; every arm gets ${delivery.bridgedVia} so the treatment reaches it` });
+        checks.push({ name: 'delivery', pass: true, warn: true, detail: `Claude Code does not read ${delivery.file}; every arm gets ${delivery.bridgedVia} so the treatment reaches it, and an arm without instructions gets an empty ${delivery.file} so the import never dangles` });
         const refs = [...new Set(loaded.config.tasks.map((task) => task.ref ?? loaded.config.baseRef ?? 'HEAD'))];
         if (repository) for (const ref of refs) {
           if (await pathExistsAtRef(repository, ref, delivery.bridge)) checks.push({ name: 'delivery', pass: true, warn: true, detail: `${ref} already has ${delivery.bridge}: its rules reach every arm, including the one without instructions, and ContextTest adds the import to it` });

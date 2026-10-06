@@ -176,6 +176,21 @@ export async function runAgentVersions(agents, environment) {
   return [...seen.values()];
 }
 
+// A bridged arm without instructions still gets an instruction file—an empty
+// one—so its CLAUDE.md import resolves to nothing instead of dangling. Claude
+// Code notices a dangling import and can spend a turn looking for the missing
+// file, which would make "no instructions" a treatment of its own.
+function bridgedVariant(arm) {
+  return arm.delivery.method === 'bridged' && arm.variant.disabled ? { name: arm.variant.name, content: '' } : arm.variant;
+}
+
+export function deliveryRecord(arm) {
+  return {
+    file: arm.delivery.file, method: arm.delivery.method, bridgedVia: arm.delivery.bridgedVia,
+    ...(bridgedVariant(arm) !== arm.variant ? { emptyTargetForDisabledArm: true } : {}),
+  };
+}
+
 // Run every job in its own detached worktree. Any trial that fails before the
 // agent could run invalidates the whole experiment.
 export async function executeTrials({ config, root, run, jobs, keepWorktrees = false, onEvent = () => {} }) {
@@ -189,7 +204,7 @@ export async function executeTrials({ config, root, run, jobs, keepWorktrees = f
     try {
       await createWorktree({ repository: run.repository, destination: worktree, ref: job.task.ref ?? config.baseRef ?? 'HEAD' });
       created = true;
-      await applyVariant({ root, worktree, instructionFile, variant: arm.variant });
+      await applyVariant({ root, worktree, instructionFile, variant: bridgedVariant(arm) });
       const bridge = arm.delivery.method === 'bridged' ? await applyDeliveryBridge({ worktree, bridge: arm.delivery.bridge, importLine: CLAUDE_BRIDGE_IMPORT, target: instructionFile }) : null;
       await runSetupCommands(config, worktree);
       await snapshotTrialBaseline(worktree);
@@ -259,7 +274,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
       name: arm.name,
       agent: describeAgent(arm.agent),
       instructions: instructions[index],
-      delivery: { file: arm.delivery.file, method: arm.delivery.method, bridgedVia: arm.delivery.bridgedVia },
+      delivery: deliveryRecord(arm),
       invocation: describeInvocation(arm.agent, config.environment),
       trials: trialResults.filter((trial) => trial.variant === arm.name),
     })),

@@ -48,7 +48,7 @@ The top table answers the quickest questions:
 | Median diff lines | added plus deleted text lines |
 | Median input tokens | provider-reported input usage when available |
 | Median cost | provider-reported or calculated cost when available; otherwise `—` |
-| Instruction delivery | how each arm's agent receives the instruction file: `native`, `via CLAUDE.md @import` (bridged for Claude Code), or `unverified`; omitted for `command` and `mock` agents |
+| Instruction delivery | how each arm's agent receives the instruction file: `native`, `via CLAUDE.md @import` (bridged for Claude Code; `(empty AGENTS.md)` marks the arm without instructions, whose import resolves to an empty file), or `unverified`; omitted for `command` and `mock` agents |
 
 A warning panel above the table appears whenever ContextTest has a reason to doubt the result—for example an instruction file the agent does not load on its own. Read it before the numbers.
 

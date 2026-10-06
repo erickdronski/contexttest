@@ -8,7 +8,7 @@ const percent = (value) => `${Math.round((value ?? 0) * 100)}%`;
 const number = (value) => Number.isFinite(value) ? Math.round(value).toLocaleString('en-US') : '—';
 const interval = (value) => Array.isArray(value) ? `${percent(value[0])}–${percent(value[1])}` : '—';
 const probability = (value) => Number.isFinite(value) ? (value < 0.001 ? '<0.001' : value.toFixed(3)) : '—';
-const deliveryLabel = (delivery) => !delivery || delivery.method === 'unknown' ? '—' : delivery.method === 'bridged' ? `via ${delivery.bridgedVia}` : delivery.method;
+const deliveryLabel = (delivery) => !delivery || delivery.method === 'unknown' ? '—' : delivery.method === 'bridged' ? `via ${delivery.bridgedVia}${delivery.emptyTargetForDisabledArm ? ` (empty ${delivery.file})` : ''}` : delivery.method;
 const showsDelivery = (variants) => variants.some((variant) => variant.delivery && variant.delivery.method !== 'unknown');
 // Reports before 0.3.0 record one agent for the whole experiment.
 export const agentLabel = (agent) => agent ? [agent.provider, agent.model, agent.isolate ? 'isolated' : null].filter(Boolean).join(' · ') : '—';

@@ -21,7 +21,7 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Fixed
 
-- Deliver `AGENTS.md` treatments to Claude Code, which reads `CLAUDE.md`: every Claude Code arm now gets the same `CLAUDE.md` import, excluded from agent metrics. Earlier Claude Code experiments with the default instruction file compared identical arms
+- Deliver `AGENTS.md` treatments to Claude Code, which reads `CLAUDE.md`: every Claude Code arm now gets the same `CLAUDE.md` import, and the arm without instructions gets an empty `AGENTS.md` so the import never dangles (recorded as `emptyTargetForDisabledArm`), both excluded from agent metrics. Earlier Claude Code experiments with the default instruction file compared identical arms
 - Invalidate experiments whose agent never started—an unrecognized Claude model, a Claude Code exit before its first turn, or a missing executable—instead of scoring them as agent failures
 - Parse Claude Code usage when diagnostics precede the JSON result, and count cache reads and writes toward total input
 - Reject unknown variant and trial keys, so a misspelled override cannot silently produce an A/A comparison
