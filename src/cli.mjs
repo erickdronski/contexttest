@@ -3,7 +3,7 @@ import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createStarterConfig, loadConfig } from './lib/config.mjs';
 import { runExperiment } from './lib/engine.mjs';
-import { deliveryFor, deliveryWarning } from './lib/adapters.mjs';
+import { deliveryFor, deliveryWarning, ISOLATION_FLAGS } from './lib/adapters.mjs';
 import { assertGitRepository, currentCommit, pathExistsAtRef } from './lib/git.mjs';
 import { renderHtmlReport, renderTerminalReport } from './lib/reporter.mjs';
 import { exists, findExecutable, isPathInside, parseArgs, runProcess, VERSION, writeJson } from './lib/utils.mjs';
@@ -102,6 +102,9 @@ async function doctor(flags) {
         if (await pathExistsAtRef(repository, ref, delivery.bridge)) checks.push({ name: 'delivery', pass: true, warn: true, detail: `${ref} already has ${delivery.bridge}: its rules reach every arm, including the one without instructions, and ContextTest adds the import to it` });
       }
     }
+    const { provider, isolate } = loaded.config.agent;
+    if (ISOLATION_FLAGS[provider] && isolate) checks.push({ name: 'isolation', pass: true, detail: `trials run with ${ISOLATION_FLAGS[provider].join(' ')}` });
+    if (ISOLATION_FLAGS[provider] && !isolate) checks.push({ name: 'isolation', pass: true, warn: true, detail: provider === 'claude' ? 'your user settings, plugins, hooks, and MCP servers load into every trial; set agent.isolate: true' : 'your ~/.codex/config.toml (profiles, MCP servers) applies to every trial; set agent.isolate: true' });
     for (const variant of loaded.config.variants.filter((item) => item.source)) {
       const source = path.resolve(loaded.root, variant.source);
       const pass = isPathInside(loaded.root, source) && await exists(source);

@@ -70,6 +70,8 @@ export function validateConfig(config) {
   if (config.agent?.executable !== undefined && !nonEmpty(config.agent.executable)) errors.push('agent.executable must be a non-empty string.');
   if (config.agent?.model !== undefined && !nonEmpty(config.agent.model)) errors.push('agent.model must be a non-empty string.');
   if (config.agent?.ignoreUserConfig !== undefined && typeof config.agent.ignoreUserConfig !== 'boolean') errors.push('agent.ignoreUserConfig must be a boolean.');
+  if (config.agent?.isolate !== undefined && typeof config.agent.isolate !== 'boolean') errors.push('agent.isolate must be a boolean.');
+  if (config.agent?.isolate === true && !['codex', 'claude'].includes(config.agent.provider)) errors.push('agent.isolate is supported only for the codex and claude providers; isolate a custom agent inside its own command.');
   if (config.agent?.provider === 'command' && !commandArray(config.agent.command)) errors.push('agent.command must be a non-empty string argument array for the command provider.');
   if (config.agent?.timeoutMinutes !== undefined && !boundedNumber(config.agent.timeoutMinutes, 0, 1440)) errors.push('agent.timeoutMinutes must be greater than 0 and no more than 1440.');
   if (config.agent?.maxTurns !== undefined && (!Number.isInteger(config.agent.maxTurns) || config.agent.maxTurns < 1 || config.agent.maxTurns > 1000)) errors.push('agent.maxTurns must be an integer from 1 to 1000.');

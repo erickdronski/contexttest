@@ -32,7 +32,7 @@ const memory = process.env.FAKE_CLAUDE_DEAF === '1' ? '' : load('CLAUDE.md');
 writeFileSync('value.txt', memory.includes('MAKE_GOOD_CHANGE') ? 'expected\n' : 'wrong\n');
 const turns = 3;
 const perRequest = 20000 + Math.round(Buffer.byteLength(memory) / 4);
-process.stdout.write(JSON.stringify({ type: 'result', num_turns: turns, total_cost_usd: 0.01, usage: { input_tokens: 12 * turns, cache_read_input_tokens: (perRequest - 12) * turns, cache_creation_input_tokens: 0, output_tokens: 10 } }));
+process.stdout.write(JSON.stringify({ type: 'result', num_turns: turns, total_cost_usd: 0.01, args: args.filter((arg) => arg.startsWith('--')), usage: { input_tokens: 12 * turns, cache_read_input_tokens: (perRequest - 12) * turns, cache_creation_input_tokens: 0, output_tokens: 10 } }));
 `;
 
 async function git(root, ...args) {
@@ -79,6 +79,20 @@ test('Claude Code receives AGENTS.md through a CLAUDE.md import in every arm', {
   assert.equal(report.comparison.treatmentDelivery, 'consistent');
   assert.equal(report.comparison.deliveryCheck.basis, 'request');
   assert.deepEqual(report.warnings, []);
+  assert.equal(report.runtime.agents[0].version, '9.9.9 (Fake Claude Code)');
+});
+
+test('isolated Claude Code trials run without user MCP servers or settings, and say so', { skip }, async () => {
+  const root = await repository();
+  const report = await runExperiment({ config: claudeConfig(await fakeClaude(), { isolate: true }), root });
+  assert.equal(report.agent.isolate, true);
+  const { args } = report.variants[1].invocation;
+  assert.deepEqual(args.slice(0, 2), ['-p', '[PROMPT]']);
+  assert.ok(args.includes('--strict-mcp-config'));
+  assert.equal(args[args.indexOf('--setting-sources') + 1], 'project,local');
+  assert.equal(JSON.stringify(report.variants[1].invocation).includes(root), false);
+  assert.match(report.variants[1].trials[0].stdout, /"--strict-mcp-config","--setting-sources"/, 'the agent received the flags');
+  assert.equal(report.comparison.winner, 'candidate', 'isolation does not block project instructions');
 });
 
 test('an agent that never reads the instructions gets a doubtful-delivery warning and label', { skip }, async () => {
@@ -128,5 +142,6 @@ test('doctor warns that Claude Code needs a bridge and that a base CLAUDE.md rea
   const { stdout } = await exec(process.execPath, [cli, 'doctor'], { cwd: root });
   assert.match(stdout, /! delivery +Claude Code does not read AGENTS\.md; every arm gets CLAUDE\.md @import/);
   assert.match(stdout, /! delivery +HEAD already has CLAUDE\.md: its rules reach every arm/);
+  assert.match(stdout, /! isolation +your user settings, plugins, hooks, and MCP servers load into every trial/);
   assert.equal(await readFile(path.join(root, 'CLAUDE.md'), 'utf8'), '# Shared rules\n', 'doctor never edits the repository');
 });

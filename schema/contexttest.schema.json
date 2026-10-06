@@ -25,7 +25,8 @@
         "permissionMode": { "enum": ["default", "acceptEdits", "plan", "bypassPermissions"] },
         "allowedTools": { "type": "array", "items": { "type": "string" } },
         "disallowedTools": { "type": "array", "items": { "type": "string" } },
-        "ignoreUserConfig": { "type": "boolean" }
+        "ignoreUserConfig": { "type": "boolean" },
+        "isolate": { "type": "boolean", "description": "Keep the experimenter's user-level agent setup out of trials. Claude Code: --strict-mcp-config --setting-sources project,local. Codex: --ignore-user-config." }
       }
     },
     "trials": {

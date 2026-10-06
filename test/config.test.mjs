@@ -81,3 +81,13 @@ test('returns useful errors for structurally malformed JSON without throwing', (
   assert.match(errors, /variants\[0\] must be an object/);
   assert.match(errors, /tasks\[0\] must be an object/);
 });
+
+test('isolation is a boolean for providers that support it', () => {
+  const config = createStarterConfig();
+  config.agent = { provider: 'claude', isolate: 'yes' };
+  assert.match(validateConfig(config).join('\n'), /agent.isolate must be a boolean/);
+  config.agent = { provider: 'command', command: ['agent'], isolate: true };
+  assert.match(validateConfig(config).join('\n'), /agent.isolate is supported only for the codex and claude providers/);
+  config.agent = { provider: 'claude', isolate: true };
+  assert.deepEqual(validateConfig(config), []);
+});

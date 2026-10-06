@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { agentStartFailure, buildCommand, deliveryFor, deliveryWarning, parseClaudeUsage, parseCodexUsage, runAgent } from '../src/lib/adapters.mjs';
+import { agentStartFailure, agentVersion, buildCommand, deliveryFor, deliveryWarning, describeInvocation, parseClaudeUsage, parseCodexUsage, runAgent } from '../src/lib/adapters.mjs';
 
 test('builds the verified Codex CLI contract without bypass flags', () => {
   const invocation = buildCommand({ provider: 'codex', model: 'gpt-test', ignoreUserConfig: true }, 'do work', '/repo');
@@ -85,4 +85,25 @@ test('a missing agent executable is a start failure, not an agent failure', asyn
   const result = await runAgent({ agent: { provider: 'command', command: ['contexttest-definitely-missing-agent'] }, prompt: 'x', cwd, environment: { inherit: false } });
   assert.equal(result.spawnError, 'ENOENT');
   assert.match(agentStartFailure({ provider: 'command' }, result), /Could not start contexttest-definitely-missing-agent: ENOENT/);
+});
+
+test('isolation keeps user-level agent setup out of trials', () => {
+  const claude = buildCommand({ provider: 'claude', isolate: true, model: 'sonnet' }, 'do work', '/repo');
+  assert.deepEqual(claude.args, ['-p', 'do work', '--output-format', 'json', '--permission-mode', 'acceptEdits', '--max-turns', '30', '--strict-mcp-config', '--setting-sources', 'project,local', '--model', 'sonnet']);
+  assert.equal(claude.args.includes('--mcp-config'), false, 'strict MCP config with no server list means no MCP servers');
+  const codex = buildCommand({ provider: 'codex', isolate: true, ignoreUserConfig: true }, 'do work', '/repo');
+  assert.deepEqual(codex.args.filter((arg) => arg === '--ignore-user-config'), ['--ignore-user-config']);
+});
+
+test('records a portable invocation without the prompt, worktree, or secrets', () => {
+  assert.deepEqual(describeInvocation({ provider: 'codex', isolate: true }).args, ['exec', '--ephemeral', '--sandbox', 'workspace-write', '--color', 'never', '--json', '-C', '[WORKTREE]', '--ignore-user-config', '[PROMPT]']);
+  const custom = describeInvocation({ provider: 'command', command: ['agent', '--token', 'sk-abcdefghijklmnopqrstuvwxyz', '--cwd', '{cwd}', '{prompt}'] });
+  assert.deepEqual(custom.args, ['--token', '[REDACTED]', '--cwd', '[WORKTREE]', '[PROMPT]']);
+  assert.equal(describeInvocation({ provider: 'mock' }), null);
+});
+
+test('captures the agent CLI version without probing custom commands', async () => {
+  assert.equal(await agentVersion({ provider: 'claude', executable: process.execPath }, { inherit: false }), process.version);
+  assert.equal(await agentVersion({ provider: 'command', command: [process.execPath] }, {}), null);
+  assert.equal(await agentVersion({ provider: 'codex', executable: 'contexttest-definitely-missing-codex' }, {}), null);
 });

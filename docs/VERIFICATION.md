@@ -6,7 +6,7 @@ ContextTest evaluates other systems, so its own evidence path must be inspectabl
 
 | Layer | Public test | What it establishes |
 |---|---|---|
-| provider contracts | [`test/adapters.test.mjs`](../test/adapters.test.mjs) | Codex/Claude/custom command construction, no bypass flags, usage parsing, output redaction |
+| provider contracts | [`test/adapters.test.mjs`](../test/adapters.test.mjs) | Codex/Claude/custom command construction, no bypass flags, isolation flags, portable invocation records, version capture, usage parsing, output redaction |
 | assertion engine | [`test/assertions.test.mjs`](../test/assertions.test.mjs) | every assertion family, unknown-type failure, safe diagnostics, symlink resistance |
 | configuration | [`test/config.test.mjs`](../test/config.test.mjs) | starter validity, bounds, duplicates, unsafe paths, provider-specific validation |
 | Git/worktrees | [`test/git.test.mjs`](../test/git.test.mjs) | rename and binary metrics, symlink defenses, serialized registry mutations under parallel trials |
@@ -55,6 +55,8 @@ The test suite cannot call a paid agent, so [`test/delivery.test.mjs`](../test/d
 - an unrecognized model, a zero-turn exit, or a missing executable invalidates the experiment instead of becoming a scored failure;
 - `contexttest doctor` warns about the bridge and about a base-ref `CLAUDE.md` whose rules reach the baseline;
 - an agent that reads nothing produces a `doubtful` delivery warning and label.
+
+Isolation is verified the same way. The adapter tests pin the exact flags (`--strict-mcp-config --setting-sources project,local` for Claude Code, `--ignore-user-config` for Codex), and the fake agent confirms they arrive while project instructions still do. On Claude Code 2.1.272 those flags cut per-request input in a canary from about 51,000 to about 27,600 tokens, with the `CLAUDE.md` treatment still delivered.
 
 A future agent release could change which files it loads. The fake cannot detect that, so every report also runs a passive delivery check over recorded token usage. [`test/stats.test.mjs`](../test/stats.test.mjs) pins it to the pattern a real failed experiment produced—about 500 bytes of instructions, 51,177 versus 51,202 input tokens over three turns—which must be labeled `doubtful`, and checks that noisy or missing usage yields `unknown` rather than a false alarm. The check can raise doubt; it cannot prove delivery. A periodic canary run against the real agent remains the strongest evidence.
 

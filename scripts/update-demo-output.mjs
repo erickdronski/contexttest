@@ -45,7 +45,7 @@ function normalizeReport(source) {
     generatedAt: '2026-07-24T00:00:00.000Z',
     commit: ZERO_COMMIT,
     taskRefs,
-    runtime: { node: 'v20+', platform: 'portable-example', arch: 'portable' },
+    runtime: { node: 'v20+', platform: 'portable-example', arch: 'portable', agents: source.runtime.agents },
     variants,
     taskResults,
     comparison,

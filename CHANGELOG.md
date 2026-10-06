@@ -16,6 +16,8 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - A report warning panel for instruction files the agent does not load on its own
 - A passive treatment-delivery check: each comparison estimates the treatment's size in tokens, compares it with the observed per-request input difference, and labels the evidence `doubtful`—with a prominent warning—when the treatment probably never reached the agent
 - Per-variant `instructions` metadata (mode, bytes, SHA-256 digest) and total input tokens, including cache reads and writes, in trial usage
+- `agent.isolate`: Claude Code trials run with `--strict-mcp-config --setting-sources project,local`, Codex trials with `--ignore-user-config`, so the experimenter's plugins, hooks, MCP servers, and user settings stay out of the experiment; `doctor` warns when it is off
+- Reports record each variant's exact invocation (prompt and worktree as placeholders) and the agent CLI's `--version` output
 
 ## [0.2.0] - 2026-07-24
 

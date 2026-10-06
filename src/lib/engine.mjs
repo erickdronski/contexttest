@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { evaluateAssertions } from './assertions.mjs';
-import { agentStartFailure, CLAUDE_BRIDGE_IMPORT, deliveryFor, deliveryWarning, runAgent } from './adapters.mjs';
+import { agentStartFailure, agentVersion, CLAUDE_BRIDGE_IMPORT, deliveryFor, deliveryWarning, describeInvocation, runAgent } from './adapters.mjs';
 import { applyDeliveryBridge, applyVariant, assertGitRepository, createWorktree, currentCommit, readVariantInstructions, removeWorktree, snapshotTrialBaseline } from './git.mjs';
 import { validateConfig } from './config.mjs';
 import { renderHtmlReport } from './reporter.mjs';
@@ -105,6 +105,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
   const taskRefs = {};
   for (const task of tasks) taskRefs[task.name] = await currentCommit(repository, task.ref ?? config.baseRef ?? 'HEAD');
   const instructions = await Promise.all(config.variants.map((variant) => describeInstructions({ root, variant })));
+  const agentRuntime = { provider: config.agent.provider, executable: config.agent.executable ?? (config.agent.provider === 'command' ? config.agent.command[0] : config.agent.provider), version: await agentVersion(config.agent, config.environment) };
   const resolvedCommits = [...new Set(Object.values(taskRefs))];
   const commit = resolvedCommits.length === 1 ? resolvedCommits[0] : null;
   await ensureSafeStateDirectory(stateRoot, repository);
@@ -168,6 +169,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
       name: variant.name,
       instructions: instructions[index],
       delivery: { file: delivery.file, method: delivery.method, bridgedVia: delivery.bridgedVia },
+      invocation: describeInvocation(config.agent, config.environment),
       trials: trialResults.filter((trial) => trial.variant === variant.name),
     })),
     tasks: tasks.map(({ name }) => name),
@@ -185,14 +187,14 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
     commit,
     taskRefs,
     instructionFile,
-    agent: { provider: config.agent.provider, model: config.agent.model ?? null },
+    agent: { provider: config.agent.provider, model: config.agent.model ?? null, isolate: config.agent.isolate === true },
     experiment: {
       attemptsPerVariant: attempts,
       concurrency: config.trials?.concurrency ?? 1,
       setupCommands: config.setup?.commands?.length ?? 0,
       configDigest: createHash('sha256').update(JSON.stringify(config)).digest('hex'),
     },
-    runtime: { node: process.version, platform: os.platform(), arch: os.arch() },
+    runtime: { node: process.version, platform: os.platform(), arch: os.arch(), agents: [agentRuntime] },
     tasks: tasks.map(({ name }) => name),
     taskResults,
     variants,

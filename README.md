@@ -152,6 +152,17 @@ For any other file name ContextTest cannot know whether the agent reads it, and 
 
 Every report also runs a passive delivery check. Instructions travel with every model request, so the arm with more instruction text should send more input tokens per request—roughly one token per four bytes of difference. When the observed difference is below a quarter of that, the report marks treatment delivery `doubtful`, prints a warning above the verdict, and withholds every confident evidence label. When the agent reports no usage, or usage varies between trials more than the treatment could explain, the check says `unknown` instead of guessing.
 
+### Keep your own agent setup out of the experiment
+
+By default the agent runs with everything installed on the experimenter's machine. Claude Code loads user settings, plugins, hooks, skills, and MCP servers into every trial; Codex applies `~/.codex/config.toml`. That makes results depend on whose laptop ran them, and a large personal setup can dwarf the instruction file being tested. Set `"isolate": true` on the agent:
+
+| Agent | `isolate: true` adds |
+|---|---|
+| Claude Code | `--strict-mcp-config --setting-sources project,local`: no MCP servers unless the project declares them, no user settings, plugins, or hooks |
+| Codex | `--ignore-user-config` |
+
+In a Claude Code canary run, isolation cut per-request input from about 51,000 tokens to about 27,600 and roughly halved cost, while the project's instructions were still delivered. Isolation narrows machine-specific state; it is not a sandbox, and other user-level state such as credentials still applies. Every report records the exact command-line flags per variant (with the prompt and worktree as placeholders) and the agent's `--version` output, because agent behavior changes between CLI releases. `contexttest doctor` warns when a Codex or Claude Code experiment is not isolated.
+
 ## A complete experiment
 
 ```json
@@ -265,7 +276,7 @@ Give command assertions a safe display label when their arguments contain sensit
 ### Codex
 
 ```json
-{ "provider": "codex", "model": "optional-model", "timeoutMinutes": 20 }
+{ "provider": "codex", "model": "optional-model", "isolate": true, "timeoutMinutes": 20 }
 ```
 
 ContextTest uses `codex exec --ephemeral --sandbox workspace-write --json`. It never passes Codex's sandbox-bypass flag.
@@ -277,6 +288,7 @@ ContextTest uses `codex exec --ephemeral --sandbox workspace-write --json`. It n
   "provider": "claude",
   "permissionMode": "acceptEdits",
   "maxTurns": 30,
+  "isolate": true,
   "timeoutMinutes": 20
 }
 ```
@@ -337,6 +349,7 @@ ContextTest therefore:
 
 - Uses detached worktrees and removes them after each run
 - Never enables permission or sandbox bypass by default
+- Offers `agent.isolate` to keep user-level agent plugins, hooks, settings, and MCP servers out of trials
 - Strips environment variables except a small runtime allowlist
 - Requires explicit opt-in for API keys and other credentials
 - Redacts common token formats and allowlisted secret values from reports
@@ -366,7 +379,7 @@ The JSON report records resolved task commits, a configuration digest, runtime m
 
 ## Experimental limits
 
-Detached worktrees isolate repository changes, not the rest of the machine. Agent accounts, provider availability, network responses, package caches, MCP servers, and model versions can all change between runs. Concurrency can also introduce shared-cache contention. Use low concurrency for latency comparisons, pin models where providers allow it, keep setup deterministic, and replicate important conclusions on another day.
+Detached worktrees isolate repository changes, not the rest of the machine. Agent accounts, provider availability, network responses, package caches, MCP servers, agent CLI releases, and model versions can all change between runs; `agent.isolate` removes the user-level agent setup, and reports record the agent's version. Concurrency can also introduce shared-cache contention. Use low concurrency for latency comparisons, pin models where providers allow it, keep setup deterministic, and replicate important conclusions on another day.
 
 ## Deterministic demo
 

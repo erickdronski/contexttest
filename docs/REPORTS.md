@@ -113,6 +113,11 @@ Each trial records:
 
 The JSON also records resolved commits per task, configuration digest, runner version, runtime metadata, setup-command count, and the comparison data needed to reproduce the terminal verdict.
 
+Two fields make agent runs reproducible across machines and releases:
+
+- `runtime.agents[]` lists each agent's provider, configured executable, and the first line of its `--version` output (Codex and Claude Code only; custom commands are never probed);
+- `variants[].invocation` is the exact command line each arm ran, with `[PROMPT]` and `[WORKTREE]` placeholders and redaction applied—so isolation flags such as `--strict-mcp-config` are visible.
+
 ## Sharing safely
 
 Reports omit the configured task prompts and instruction contents, and ContextTest redacts common credential patterns plus explicitly configured secret values. Redaction is defense in depth—not a guarantee. Failed commands or agents can repeat source excerpts, paths, or private values in surprising forms. Inspect both JSON and expanded HTML trial diagnostics before publishing a report.

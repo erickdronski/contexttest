@@ -11,7 +11,8 @@
   "instructionFile": "AGENTS.md",
   "agent": {
     "provider": "mock",
-    "model": null
+    "model": null,
+    "isolate": false
   },
   "experiment": {
     "attemptsPerVariant": 3,
@@ -22,7 +23,14 @@
   "runtime": {
     "node": "v20+",
     "platform": "portable-example",
-    "arch": "portable"
+    "arch": "portable",
+    "agents": [
+      {
+        "provider": "mock",
+        "executable": "mock",
+        "version": null
+      }
+    ]
   },
   "tasks": [
     "safe-division"
@@ -110,6 +118,7 @@
         "method": "unknown",
         "bridgedVia": null
       },
+      "invocation": null,
       "trials": [
         {
           "id": "safe-division-without-instructions-1",
@@ -343,6 +352,7 @@
         "method": "unknown",
         "bridgedVia": null
       },
+      "invocation": null,
       "trials": [
         {
           "id": "safe-division-with-instructions-1",

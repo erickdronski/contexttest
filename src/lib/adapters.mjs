@@ -96,16 +96,25 @@ export function parseClaudeUsage(stdout) {
   };
 }
 
+// Flags that keep the experimenter's personal agent setup out of every trial.
+// Claude Code: no MCP servers unless the project declares them, and no user
+// settings (plugins, hooks). Codex: no ~/.codex/config.toml.
+export const ISOLATION_FLAGS = {
+  claude: ['--strict-mcp-config', '--setting-sources', 'project,local'],
+  codex: ['--ignore-user-config'],
+};
+
 export function buildCommand(agent, prompt, cwd) {
   if (agent.provider === 'codex') {
     const args = ['exec', '--ephemeral', '--sandbox', 'workspace-write', '--color', 'never', '--json', '-C', cwd];
     if (agent.model) args.push('--model', agent.model);
-    if (agent.ignoreUserConfig) args.push('--ignore-user-config');
+    if (agent.ignoreUserConfig || agent.isolate) args.push(...ISOLATION_FLAGS.codex);
     args.push(prompt);
     return { command: agent.executable ?? 'codex', args, parseUsage: parseCodexUsage };
   }
   if (agent.provider === 'claude') {
     const args = ['-p', prompt, '--output-format', 'json', '--permission-mode', agent.permissionMode ?? 'acceptEdits', '--max-turns', String(agent.maxTurns ?? 30)];
+    if (agent.isolate) args.push(...ISOLATION_FLAGS.claude);
     if (agent.model) args.push('--model', agent.model);
     if (agent.allowedTools?.length) args.push('--allowedTools', agent.allowedTools.join(','));
     if (agent.disallowedTools?.length) args.push('--disallowedTools', agent.disallowedTools.join(','));
@@ -117,6 +126,25 @@ export function buildCommand(agent, prompt, cwd) {
     return { command, args, parseUsage: () => ({ inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null }) };
   }
   throw new Error(`Unsupported real agent provider: ${agent.provider}`);
+}
+
+// The command line a trial runs, with the prompt and worktree replaced by
+// placeholders so the record is portable and never repeats the task prompt.
+export function describeInvocation(agent, environment = {}) {
+  if (agent.provider === 'mock') return null;
+  const secrets = environmentSecrets(environment, { ...process.env, ...safeEnvironment(environment) });
+  const invocation = buildCommand(agent, '[PROMPT]', '[WORKTREE]');
+  return { command: redact(invocation.command, secrets), args: invocation.args.map((arg) => redact(arg, secrets)) };
+}
+
+// Agent behavior changes between CLI releases, so the version belongs in the
+// evidence record. Custom commands are never probed: an arbitrary executable
+// may not treat --version as harmless.
+export async function agentVersion(agent, environment = {}) {
+  if (!['codex', 'claude'].includes(agent.provider)) return null;
+  const result = await runProcess(agent.executable ?? agent.provider, ['--version'], { env: safeEnvironment(environment), timeoutMs: 30_000 });
+  if (result.code !== 0 || result.timedOut) return null;
+  return redact((result.stdout || result.stderr).trim().split('\n')[0], environmentSecrets(environment)) || null;
 }
 
 export async function runAgent({ agent, prompt, cwd, environment, onOutput, mock }) {
