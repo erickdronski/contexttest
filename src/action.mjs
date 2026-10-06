@@ -22,7 +22,8 @@ async function main() {
   await output('report-html', report.artifacts.html);
   const [baseline, candidate] = report.variants;
   const summary = `## ContextTest: ${report.comparison.winner === 'tie' ? 'no clear winner' : `${report.comparison.winner} leads`}\n\n${report.comparison.reason}\n\n| Outcome | ${baseline.name} | ${candidate.name} |\n|---|---:|---:|\n| Task success | ${percent(baseline.summary.passRate)} | ${percent(candidate.summary.passRate)} |\n| Assertion adherence | ${percent(baseline.summary.meanAssertionScore)} | ${percent(candidate.summary.meanAssertionScore)} |\n| Median duration | ${formatDuration(baseline.summary.medianDurationMs)} | ${formatDuration(candidate.summary.medianDurationMs)} |\n| Median cost | ${formatMoney(baseline.summary.medianCostUsd)} | ${formatMoney(candidate.summary.medianCostUsd)} |\n\nSignal: **${report.comparison.signal}**, based on ${report.comparison.minimumAttempts} paired attempt(s).\n`;
-  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary, 'utf8');
+  const warnings = (report.warnings ?? []).map((warning) => `> **Warning:** ${warning.message}\n`).join('\n');
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${summary}${warnings ? `\n${warnings}` : ''}`, 'utf8');
   if (report.comparison.winner === 'baseline') process.exitCode = 2;
 }
 

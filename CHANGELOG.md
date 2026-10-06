@@ -14,6 +14,8 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 - `contexttest doctor` reports how each agent receives the instruction file and warns when a base-ref `CLAUDE.md` reaches every arm
 - A report warning panel for instruction files the agent does not load on its own
+- A passive treatment-delivery check: each comparison estimates the treatment's size in tokens, compares it with the observed per-request input difference, and labels the evidence `doubtful`—with a prominent warning—when the treatment probably never reached the agent
+- Per-variant `instructions` metadata (mode, bytes, SHA-256 digest) and total input tokens, including cache reads and writes, in trial usage
 
 ## [0.2.0] - 2026-07-24
 

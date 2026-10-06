@@ -21,10 +21,10 @@ test('builds the documented Claude Code print-mode contract', () => {
 
 test('parses provider usage without trusting diagnostic lines', () => {
   const codex = parseCodexUsage('diagnostic\n{"usage":{"input_tokens":10,"cached_input_tokens":4,"output_tokens":2}}\n{"data":{"usage":{"inputTokens":15,"outputTokens":3}}}');
-  assert.deepEqual(codex, { inputTokens: 15, cachedInputTokens: 4, outputTokens: 3, costUsd: null });
+  assert.deepEqual(codex, { inputTokens: 15, cachedInputTokens: 4, outputTokens: 3, costUsd: null, totalInputTokens: 15, requests: null });
   const claude = parseClaudeUsage(JSON.stringify({ total_cost_usd: 0.012, num_turns: 3, usage: { input_tokens: 20, cache_read_input_tokens: 5, cache_creation_input_tokens: 2, output_tokens: 7 } }));
-  assert.deepEqual(claude, { inputTokens: 20, cachedInputTokens: 7, outputTokens: 7, costUsd: 0.012, requests: 3 });
-  assert.deepEqual(parseClaudeUsage('not json'), { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null, requests: null });
+  assert.deepEqual(claude, { inputTokens: 20, cachedInputTokens: 7, outputTokens: 7, costUsd: 0.012, totalInputTokens: 27, requests: 3 });
+  assert.deepEqual(parseClaudeUsage('not json'), { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null, totalInputTokens: 0, requests: null });
   assert.equal(parseClaudeUsage(`warning: diagnostic\n${JSON.stringify({ num_turns: 2, usage: { input_tokens: 9 } })}`).inputTokens, 9);
 });
 

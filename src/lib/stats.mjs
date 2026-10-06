@@ -72,7 +72,60 @@ export function pairTrials(trials, leftName, rightName) {
   return { pairs: complete.length, leftWins, rightWins, bothPass, bothFail, discordant: leftWins + rightWins, pValue: exactPairedPValue(leftWins, rightWins) };
 }
 
-export function compareVariants(left, right, paired = null) {
+// Evidence labels depend only on sample size and the exact paired p-value.
+export function signalFor(attempts, pValue) {
+  if (attempts < 3) return 'anecdotal';
+  if (attempts < 5) return 'early';
+  if (pValue !== null && pValue <= 0.01) return 'strong';
+  if (pValue !== null && pValue <= 0.05) return 'convincing';
+  return 'directional';
+}
+
+// Total prompt-side tokens one trial sent, including cache reads and writes.
+// Claude Code reports cache tokens separately from input; Codex includes them.
+export function totalInputTokens(usage = {}, provider) {
+  if (Number.isFinite(usage.totalInputTokens)) return usage.totalInputTokens;
+  const input = usage.inputTokens ?? 0;
+  return provider === 'claude' ? input + (usage.cachedInputTokens ?? 0) : input;
+}
+
+const TOKENS_PER_BYTE = 1 / 4;
+const SMALLEST_DETECTABLE_TOKENS = 25;
+const DELIVERED_FRACTION = 0.25;
+const rounded = (value, places = 1) => Number.isFinite(value) ? Math.round(value * 10 ** places) / 10 ** places : null;
+const spreadOf = (items) => { const center = median(items); return center === null ? 0 : median(items.map((value) => Math.abs(value - center))); };
+
+// A passive manipulation check. Instructions travel with every model request,
+// so an arm with more instruction text should send more input tokens per
+// request. When the observed difference is far below that, the agent probably
+// never read the file and the comparison is between identical treatments.
+// It can raise doubt; it cannot prove delivery.
+export function assessTreatmentDelivery({ left, right }) {
+  const unknown = (reason) => ({ status: 'unknown', reason });
+  if (left.agent !== right.agent) return unknown('The arms use different agents, so their token usage is not comparable.');
+  if (!Number.isFinite(left.bytes) || !Number.isFinite(right.bytes)) return unknown('Instruction sizes were not recorded.');
+  const expected = (right.bytes - left.bytes) * TOKENS_PER_BYTE;
+  if (Math.abs(expected) < SMALLEST_DETECTABLE_TOKENS) return unknown(`The instructions differ by ${Math.abs(right.bytes - left.bytes)} bytes, too little to see in token usage.`);
+  const samples = (side) => side.trials.map((trial) => ({ total: totalInputTokens(trial.usage, side.provider), requests: trial.usage?.requests })).filter((sample) => sample.total > 0);
+  const leftSamples = samples(left);
+  const rightSamples = samples(right);
+  if (!leftSamples.length || !rightSamples.length) return unknown('The agent did not report token usage.');
+  const perRequest = [...leftSamples, ...rightSamples].every((sample) => sample.requests > 0);
+  const value = (sample) => perRequest ? sample.total / sample.requests : sample.total;
+  const leftValues = leftSamples.map(value);
+  const rightValues = rightSamples.map(value);
+  const observed = median(rightValues) - median(leftValues);
+  const ratio = observed / expected;
+  const spread = Math.max(spreadOf(leftValues), spreadOf(rightValues));
+  const unit = perRequest ? 'per request' : 'per trial';
+  const [heavier, lighter] = expected > 0 ? [right.name, left.name] : [left.name, right.name];
+  const details = { basis: perRequest ? 'request' : 'trial', instructionBytes: [left.bytes, right.bytes], expectedTokens: rounded(Math.abs(expected)), observedTokens: rounded(observed * Math.sign(expected)), ratio: rounded(ratio, 3), spreadTokens: rounded(spread) };
+  if (ratio >= DELIVERED_FRACTION) return { status: 'consistent', reason: `${heavier} sent about ${Math.round(observed * Math.sign(expected))} more input tokens ${unit} than ${lighter}; its instructions should add about ${Math.round(Math.abs(expected))}.`, ...details };
+  if (spread > Math.abs(expected)) return { status: 'unknown', reason: `Input ${unit} varies by about ±${Math.round(spread)} tokens between trials, more than the ~${Math.round(Math.abs(expected))}-token treatment, so usage cannot confirm delivery.`, ...details };
+  return { status: 'doubtful', reason: `${heavier} sent only ${Math.round(observed * Math.sign(expected))} more input tokens ${unit} than ${lighter}, but its instructions should add about ${Math.round(Math.abs(expected))}. The agent may never have read them.`, ...details };
+}
+
+export function compareVariants(left, right, paired = null, delivery = null) {
   const passDelta = right.passRate - left.passRate;
   const scoreDelta = (right.meanAssertionScore ?? 0) - (left.meanAssertionScore ?? 0);
   let winner = 'tie';
@@ -92,6 +145,9 @@ export function compareVariants(left, right, paired = null) {
   }
   const attempts = Math.min(left.attempts, right.attempts);
   const pValue = paired?.pValue ?? null;
-  const signal = attempts < 3 ? 'anecdotal' : attempts < 5 ? 'early' : pValue !== null && pValue <= 0.01 ? 'strong' : pValue !== null && pValue <= 0.05 ? 'convincing' : 'directional';
-  return { winner, reason, passRateDelta: passDelta, assertionScoreDelta: scoreDelta, signal, minimumAttempts: attempts, paired, pValue, statisticallySignificant: pValue !== null && pValue <= 0.05 };
+  // A comparison whose treatment probably never reached the agent cannot earn
+  // a confident label, whatever its p-value says.
+  const signal = delivery?.status === 'doubtful' ? 'doubtful' : signalFor(attempts, pValue);
+  const deliveryFields = delivery ? { treatmentDelivery: delivery.status, deliveryCheck: delivery } : {};
+  return { winner, reason, passRateDelta: passDelta, assertionScoreDelta: scoreDelta, signal, minimumAttempts: attempts, paired, pValue, statisticallySignificant: pValue !== null && pValue <= 0.05, ...deliveryFields };
 }

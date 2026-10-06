@@ -43,6 +43,23 @@ export async function removeWorktree({ repository, destination, worktreeRoot, en
   });
 }
 
+async function resolveVariantSource(root, source) {
+  const target = path.resolve(root, source);
+  if (!isPathInside(root, target)) throw new Error(`Variant source escapes the project root: ${source}`);
+  const [realRoot, realSource] = await Promise.all([realpath(root), realpath(target)]);
+  if (!isPathInside(realRoot, realSource)) throw new Error(`Variant source traverses a symlink outside the project root: ${source}`);
+  if (!(await lstat(realSource)).isFile()) throw new Error(`Variant source is not a regular file: ${source}`);
+  return target;
+}
+
+// The exact bytes a variant writes to the instruction file, or null when the
+// variant removes it. Sources pass the same containment checks as applyVariant.
+export async function readVariantInstructions({ root, variant }) {
+  if (variant.disabled) return null;
+  if (typeof variant.content === 'string') return Buffer.from(variant.content, 'utf8');
+  return readFile(await resolveVariantSource(root, variant.source));
+}
+
 export async function applyVariant({ root, worktree, instructionFile, variant }) {
   const destination = path.resolve(worktree, instructionFile);
   if (!isPathInside(worktree, destination)) throw new Error(`instructionFile escapes the worktree: ${instructionFile}`);
@@ -53,12 +70,7 @@ export async function applyVariant({ root, worktree, instructionFile, variant })
   if (variant.disabled) {
     if (destinationDetails) await unlink(destination);
   } else if (variant.source) {
-    const source = path.resolve(root, variant.source);
-    if (!isPathInside(root, source)) throw new Error(`Variant source escapes the project root: ${variant.source}`);
-    const [realRoot, realSource] = await Promise.all([realpath(root), realpath(source)]);
-    if (!isPathInside(realRoot, realSource)) throw new Error(`Variant source traverses a symlink outside the project root: ${variant.source}`);
-    const sourceDetails = await lstat(realSource);
-    if (!sourceDetails.isFile()) throw new Error(`Variant source is not a regular file: ${variant.source}`);
+    const source = await resolveVariantSource(root, variant.source);
     if (destinationDetails?.isSymbolicLink()) throw new Error(`Refusing symlinked instruction destination: ${instructionFile}`);
     await copyFile(source, destination);
   } else {

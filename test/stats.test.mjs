@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compareVariants, exactPairedPValue, median, pairTrials, summarizeTrials, wilsonInterval } from '../src/lib/stats.mjs';
+import { assessTreatmentDelivery, compareVariants, exactPairedPValue, median, pairTrials, signalFor, summarizeTrials, totalInputTokens, wilsonInterval } from '../src/lib/stats.mjs';
 
 test('median handles odd and even samples', () => {
   assert.equal(median([1, 3, 2]), 2);
@@ -59,4 +59,66 @@ test('pairs outcomes by task and attempt instead of treating runs as independent
   );
   assert.equal(comparison.statisticallySignificant, true);
   assert.equal(comparison.signal, 'convincing');
+});
+
+test('evidence labels follow sample size, then the exact paired p-value', () => {
+  assert.equal(signalFor(2, 0.001), 'anecdotal');
+  assert.equal(signalFor(4, 0.001), 'early');
+  assert.equal(signalFor(6, 0.2), 'directional');
+  assert.equal(signalFor(6, 0.03), 'convincing');
+  assert.equal(signalFor(8, 0.008), 'strong');
+});
+
+const side = (name, bytes, usages, provider = 'claude') => ({ name, bytes, provider, agent: 'shared', trials: usages.map((usage) => ({ usage })) });
+
+test('flags the measured Claude Code pattern where AGENTS.md was never read', () => {
+  // A real canary: ~500 bytes of instructions, three turns per run, and only
+  // 25 more input tokens in total for the arm that supposedly carried them.
+  const check = assessTreatmentDelivery({
+    left: side('without', 0, [{ inputTokens: 12, cachedInputTokens: 51165, requests: 3 }]),
+    right: side('with', 500, [{ inputTokens: 37, cachedInputTokens: 51165, requests: 3 }]),
+  });
+  assert.equal(check.status, 'doubtful');
+  assert.equal(check.basis, 'request');
+  assert.equal(check.expectedTokens, 125);
+  assert.equal(check.observedTokens, 8.3);
+  assert.equal(check.ratio, 0.067);
+  assert.match(check.reason, /with sent only 8 more input tokens per request than without, but its instructions should add about 125/);
+  assert.equal(totalInputTokens({ inputTokens: 12, cachedInputTokens: 51165 }, 'claude'), 51177);
+  assert.equal(totalInputTokens({ inputTokens: 900, cachedInputTokens: 600 }, 'codex'), 900);
+});
+
+test('accepts usage that grows with the treatment and stays silent when it cannot tell', () => {
+  const delivered = assessTreatmentDelivery({
+    left: side('without', 0, [{ totalInputTokens: 51177, requests: 3 }, { totalInputTokens: 51180, requests: 3 }]),
+    right: side('with', 500, [{ totalInputTokens: 51552, requests: 3 }, { totalInputTokens: 51560, requests: 3 }]),
+  });
+  assert.equal(delivered.status, 'consistent');
+  const noisy = assessTreatmentDelivery({
+    left: side('without', 0, [{ totalInputTokens: 30000, requests: 1 }, { totalInputTokens: 42000, requests: 1 }, { totalInputTokens: 51000, requests: 1 }]),
+    right: side('with', 500, [{ totalInputTokens: 31000, requests: 1 }, { totalInputTokens: 42010, requests: 1 }, { totalInputTokens: 50000, requests: 1 }]),
+  });
+  assert.equal(noisy.status, 'unknown');
+  assert.match(noisy.reason, /varies by about ±\d+ tokens between trials/);
+  const codex = assessTreatmentDelivery({
+    left: side('without', 0, [{ inputTokens: 20000 }], 'codex'),
+    right: side('with', 2000, [{ inputTokens: 20020 }], 'codex'),
+  });
+  assert.equal(codex.basis, 'trial');
+  assert.equal(codex.status, 'doubtful');
+  assert.equal(assessTreatmentDelivery({ left: side('a', 0, [{}]), right: side('b', 500, [{}]) }).reason, 'The agent did not report token usage.');
+  assert.match(assessTreatmentDelivery({ left: side('a', 100, [{ totalInputTokens: 1 }]), right: side('b', 140, [{ totalInputTokens: 1 }]) }).reason, /differ by 40 bytes/);
+  assert.match(assessTreatmentDelivery({ left: { ...side('a', 0, []), agent: 'codex' }, right: side('b', 500, []) }).reason, /different agents/);
+});
+
+test('doubtful delivery downgrades even a strong-looking result', () => {
+  const left = { attempts: 8, passRate: 0, meanAssertionScore: 0, medianDurationMs: 100 };
+  const right = { attempts: 8, passRate: 1, meanAssertionScore: 1, medianDurationMs: 100 };
+  const paired = { pairs: 8, leftWins: 0, rightWins: 8, bothPass: 0, bothFail: 0, discordant: 8, pValue: exactPairedPValue(0, 8) };
+  assert.equal(compareVariants(left, right, paired).signal, 'strong');
+  const doubtful = compareVariants(left, right, paired, { status: 'doubtful', reason: 'not read' });
+  assert.equal(doubtful.signal, 'doubtful');
+  assert.equal(doubtful.treatmentDelivery, 'doubtful');
+  assert.equal(doubtful.statisticallySignificant, true, 'the arithmetic is unchanged; only the label is withheld');
+  assert.equal(compareVariants(left, right, paired, { status: 'unknown', reason: 'no usage' }).signal, 'strong');
 });

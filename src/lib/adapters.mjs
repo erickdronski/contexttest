@@ -55,7 +55,7 @@ export function agentStartFailure(agent, result) {
 }
 
 export function parseCodexUsage(stdout) {
-  const usage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null };
+  const usage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null, totalInputTokens: 0, requests: null };
   for (const line of stdout.split('\n')) {
     try {
       const event = JSON.parse(line);
@@ -66,6 +66,9 @@ export function parseCodexUsage(stdout) {
       usage.outputTokens = Math.max(usage.outputTokens, candidate.output_tokens ?? candidate.outputTokens ?? 0);
     } catch { /* Non-JSON diagnostic lines are expected. */ }
   }
+  // Codex counts cached input inside input_tokens and does not report how many
+  // model requests a run made.
+  usage.totalInputTokens = usage.inputTokens;
   return usage;
 }
 
@@ -79,13 +82,16 @@ function lastJsonObject(stdout) {
 
 export function parseClaudeUsage(stdout) {
   const data = lastJsonObject(stdout);
-  if (!data) return { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null, requests: null };
+  if (!data) return { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null, totalInputTokens: 0, requests: null };
   const candidate = data.usage ?? {};
+  const inputTokens = candidate.input_tokens ?? 0;
+  const cachedInputTokens = (candidate.cache_read_input_tokens ?? 0) + (candidate.cache_creation_input_tokens ?? 0);
   return {
-    inputTokens: candidate.input_tokens ?? 0,
-    cachedInputTokens: (candidate.cache_read_input_tokens ?? 0) + (candidate.cache_creation_input_tokens ?? 0),
+    inputTokens,
+    cachedInputTokens,
     outputTokens: candidate.output_tokens ?? 0,
     costUsd: data.total_cost_usd ?? null,
+    totalInputTokens: inputTokens + cachedInputTokens,
     requests: Number.isInteger(data.num_turns) ? data.num_turns : null,
   };
 }

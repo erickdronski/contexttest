@@ -4,10 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { evaluateAssertions } from './assertions.mjs';
 import { agentStartFailure, CLAUDE_BRIDGE_IMPORT, deliveryFor, deliveryWarning, runAgent } from './adapters.mjs';
-import { applyDeliveryBridge, applyVariant, assertGitRepository, createWorktree, currentCommit, removeWorktree, snapshotTrialBaseline } from './git.mjs';
+import { applyDeliveryBridge, applyVariant, assertGitRepository, createWorktree, currentCommit, readVariantInstructions, removeWorktree, snapshotTrialBaseline } from './git.mjs';
 import { validateConfig } from './config.mjs';
 import { renderHtmlReport } from './reporter.mjs';
-import { compareVariants, pairTrials, summarizeTrials } from './stats.mjs';
+import { assessTreatmentDelivery, compareVariants, pairTrials, summarizeTrials } from './stats.mjs';
 import { ensureDir, environmentSecrets, isPathInside, redact, runProcess, safeEnvironment, slug, timestampId, VERSION, writeJson } from './utils.mjs';
 
 async function pool(items, concurrency, worker) {
@@ -38,6 +38,44 @@ async function runSetupCommands(config, worktree) {
   }
 }
 
+// What each arm's instruction file contains, without recording the text itself.
+export async function describeInstructions({ root, variant }) {
+  const content = await readVariantInstructions({ root, variant });
+  const mode = variant.disabled ? 'disabled' : typeof variant.content === 'string' ? 'content' : 'source';
+  return {
+    mode,
+    ...(mode === 'source' ? { source: variant.source } : {}),
+    bytes: content?.length ?? 0,
+    digest: content ? createHash('sha256').update(content).digest('hex') : null,
+  };
+}
+
+export function deliveryWarnings(comparison) {
+  if (comparison.treatmentDelivery !== 'doubtful') return [];
+  return [{ code: 'treatment-delivery', message: `Treatment delivery is doubtful. ${comparison.deliveryCheck.reason} The evidence label is downgraded to "doubtful"; check the agent's instruction file before trusting any difference.` }];
+}
+
+// Every number in a report comes from here, so a stored report can be
+// re-analyzed from its trials with exactly the rules that produced it.
+export function analyzeExperiment({ variants, tasks, taskRefs = {}, provider }) {
+  const summarized = variants.map((variant) => ({ ...variant, summary: summarizeTrials(variant.trials) }));
+  const [left, right] = summarized;
+  const checkDelivery = (trials) => {
+    const side = (variant) => ({ name: variant.name, trials: trials.filter((trial) => trial.variant === variant.name), bytes: variant.instructions?.bytes, agent: 'shared', provider });
+    return assessTreatmentDelivery({ left: side(left), right: side(right) });
+  };
+  const compare = (trials) => {
+    const summaries = summarized.map((variant) => summarizeTrials(trials.filter((trial) => trial.variant === variant.name)));
+    return { summaries, comparison: compareVariants(summaries[0], summaries[1], pairTrials(trials, left.name, right.name), checkDelivery(trials)) };
+  };
+  const allTrials = summarized.flatMap((variant) => variant.trials);
+  const taskResults = tasks.map((name) => {
+    const { summaries, comparison } = compare(allTrials.filter((trial) => trial.task === name));
+    return { name, ref: taskRefs[name], variants: summarized.map((variant, index) => ({ name: variant.name, summary: summaries[index] })), comparison };
+  });
+  return { variants: summarized, comparison: compare(allTrials).comparison, taskResults };
+}
+
 async function ensureSafeStateDirectory(target, repository) {
   try {
     const details = await lstat(target);
@@ -66,6 +104,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
   if (!tasks.length) throw new Error(`No task named ${taskFilter}.`);
   const taskRefs = {};
   for (const task of tasks) taskRefs[task.name] = await currentCommit(repository, task.ref ?? config.baseRef ?? 'HEAD');
+  const instructions = await Promise.all(config.variants.map((variant) => describeInstructions({ root, variant })));
   const resolvedCommits = [...new Set(Object.values(taskRefs))];
   const commit = resolvedCommits.length === 1 ? resolvedCommits[0] : null;
   await ensureSafeStateDirectory(stateRoot, repository);
@@ -124,20 +163,16 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
     const first = infrastructureFailures[0].assertions[0].message;
     throw new Error(`${infrastructureFailures.length} trial(s) failed before the agent could run. The experiment is invalid.\nFirst failure: ${first}`);
   }
-  const variants = config.variants.map((variant) => {
-    const trials = trialResults.filter((trial) => trial.variant === variant.name);
-    return { name: variant.name, delivery: { file: delivery.file, method: delivery.method, bridgedVia: delivery.bridgedVia }, trials, summary: summarizeTrials(trials) };
-  });
-  const paired = pairTrials(trialResults, variants[0].name, variants[1].name);
-  const comparison = compareVariants(variants[0].summary, variants[1].summary, paired);
-  const taskResults = tasks.map((task) => {
-    const taskTrials = trialResults.filter((trial) => trial.task === task.name);
-    const taskVariants = config.variants.map((variant) => {
-      const trials = taskTrials.filter((trial) => trial.variant === variant.name);
-      return { name: variant.name, summary: summarizeTrials(trials) };
-    });
-    const taskPaired = pairTrials(taskTrials, taskVariants[0].name, taskVariants[1].name);
-    return { name: task.name, ref: taskRefs[task.name], variants: taskVariants, comparison: compareVariants(taskVariants[0].summary, taskVariants[1].summary, taskPaired) };
+  const { variants, comparison, taskResults } = analyzeExperiment({
+    variants: config.variants.map((variant, index) => ({
+      name: variant.name,
+      instructions: instructions[index],
+      delivery: { file: delivery.file, method: delivery.method, bridgedVia: delivery.bridgedVia },
+      trials: trialResults.filter((trial) => trial.variant === variant.name),
+    })),
+    tasks: tasks.map(({ name }) => name),
+    taskRefs,
+    provider: config.agent.provider,
   });
   const jsonPath = path.join(artifactRoot, 'report.json');
   const htmlPath = path.join(artifactRoot, 'report.html');
@@ -162,7 +197,10 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
     taskResults,
     variants,
     comparison,
-    warnings: [deliveryWarning(config.agent.provider, delivery)].filter(Boolean).map((message) => ({ code: 'delivery', message })),
+    warnings: [
+      ...[deliveryWarning(config.agent.provider, delivery)].filter(Boolean).map((message) => ({ code: 'delivery', message })),
+      ...deliveryWarnings(comparison),
+    ],
     artifacts: { json: jsonPath, html: htmlPath },
   };
   await writeJson(jsonPath, report);

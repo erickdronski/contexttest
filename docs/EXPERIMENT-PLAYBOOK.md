@@ -86,19 +86,21 @@ Five pairs can provide directional evidence. More pairs may be needed when disag
 ## 7. Read the evidence in the right order
 
 1. **Infrastructure validity** — any setup/worktree failure invalidates the experiment.
-2. **Task success** — every configured assertion must pass.
-3. **Task breakdown** — check that an aggregate win does not hide a local regression.
-4. **Paired table and exact p-value** — inspect disagreements, not just independent percentages.
-5. **Confidence intervals** — wide intervals mean the success rate remains uncertain.
-6. **Assertion adherence** — shows partial compliance but does not override failed tasks.
-7. **Efficiency** — compare duration, tokens, cost, changed files, and diff lines after success.
-8. **Trial diagnostics** — explain failures; do not cherry-pick them into a different metric.
+2. **Treatment delivery** — a `doubtful` warning means the agent probably never read the instructions; fix delivery before reading anything else.
+3. **Task success** — every configured assertion must pass.
+4. **Task breakdown** — check that an aggregate win does not hide a local regression.
+5. **Paired table and exact p-value** — inspect disagreements, not just independent percentages.
+6. **Confidence intervals** — wide intervals mean the success rate remains uncertain.
+7. **Assertion adherence** — shows partial compliance but does not override failed tasks.
+8. **Efficiency** — compare duration, tokens, cost, changed files, and diff lines after success.
+9. **Trial diagnostics** — explain failures; do not cherry-pick them into a different metric.
 
 ## 8. Classify failures before changing instructions
 
 | Failure | Meaning | Response |
 |---|---|---|
-| infrastructure error | worktree, setup, configuration, or executable failed | fix the harness; discard the run |
+| infrastructure error | worktree, setup, configuration, or executable failed, or the agent stopped before its first turn | fix the harness; discard the run |
+| doubtful treatment delivery | token usage barely changed between arms | confirm the agent loads the instruction file (see `contexttest doctor`); discard the run |
 | assertion failure | agent completed but outcome was not mergeable | valid negative evidence |
 | agent timeout or nonzero exit | agent did not complete successfully | valid outcome if the infrastructure was healthy |
 | flaky repository check | measurement is unreliable | stabilize or replace the assertion |
@@ -114,6 +116,7 @@ Before sharing or acting on a result, confirm:
 - [ ] tasks represent recurring repository work;
 - [ ] assertions are deterministic and approximate mergeability;
 - [ ] no infrastructure failures occurred;
+- [ ] treatment delivery is not `doubtful`, and the agent loads the instruction file natively or through the recorded bridge;
 - [ ] the report's task-level outcomes agree with the aggregate story;
 - [ ] the sample size and exact p-value support the strength of the claim;
 - [ ] diagnostics were inspected for sensitive source, paths, and agent output;

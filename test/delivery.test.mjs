@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runExperiment } from '../src/lib/engine.mjs';
+import { renderHtmlReport, renderTerminalReport } from '../src/lib/reporter.mjs';
 
 const exec = promisify(execFile);
 const cli = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/cli.mjs');
@@ -26,10 +27,12 @@ if (model === 'not-a-model') {
   process.exit(1);
 }
 const load = (file) => existsSync(file) ? readFileSync(file, 'utf8').split('\n').map((line) => /^@\S+$/.test(line.trim()) ? load(path.resolve(path.dirname(file), line.trim().slice(1))) : line).join('\n') : '';
-const memory = load('CLAUDE.md');
+// FAKE_CLAUDE_DEAF reproduces the original bug: the agent reads nothing.
+const memory = process.env.FAKE_CLAUDE_DEAF === '1' ? '' : load('CLAUDE.md');
 writeFileSync('value.txt', memory.includes('MAKE_GOOD_CHANGE') ? 'expected\n' : 'wrong\n');
-const input = 1000 + Math.round(Buffer.byteLength(memory) / 4);
-process.stdout.write(JSON.stringify({ type: 'result', num_turns: 1, total_cost_usd: 0.01, usage: { input_tokens: input, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 10 } }));
+const turns = 3;
+const perRequest = 20000 + Math.round(Buffer.byteLength(memory) / 4);
+process.stdout.write(JSON.stringify({ type: 'result', num_turns: turns, total_cost_usd: 0.01, usage: { input_tokens: 12 * turns, cache_read_input_tokens: (perRequest - 12) * turns, cache_creation_input_tokens: 0, output_tokens: 10 } }));
 `;
 
 async function git(root, ...args) {
@@ -48,7 +51,7 @@ async function repository(files = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'contexttest-delivery-'));
   await git(root, 'init');
   await writeFile(path.join(root, 'value.txt'), 'original\n');
-  await writeFile(path.join(root, 'candidate.md'), 'MAKE_GOOD_CHANGE\n');
+  await writeFile(path.join(root, 'candidate.md'), `MAKE_GOOD_CHANGE\n${'- Follow the repository conventions for every change.\n'.repeat(10)}`);
   for (const [name, content] of Object.entries(files)) await writeFile(path.join(root, name), content);
   await git(root, 'add', '.');
   await git(root, 'commit', '-m', 'fixture');
@@ -73,8 +76,25 @@ test('Claude Code receives AGENTS.md through a CLAUDE.md import in every arm', {
     assert.equal(variant.trials[0].bridge, 'created', 'the arm without instructions gets the same bridge');
     assert.deepEqual(variant.trials[0].files, ['value.txt'], 'the bridge is not an agent change');
   }
-  const [without, withInstructions] = report.variants.map((variant) => variant.trials[0].usage.inputTokens);
-  assert.ok(withInstructions > without);
+  assert.equal(report.comparison.treatmentDelivery, 'consistent');
+  assert.equal(report.comparison.deliveryCheck.basis, 'request');
+  assert.deepEqual(report.warnings, []);
+});
+
+test('an agent that never reads the instructions gets a doubtful-delivery warning and label', { skip }, async () => {
+  const root = await repository();
+  const config = { ...claudeConfig(await fakeClaude()), environment: { inherit: false, set: { FAKE_CLAUDE_DEAF: '1' } } };
+  const report = await runExperiment({ config, root });
+  assert.equal(report.variants[0].summary.passRate, report.variants[1].summary.passRate, 'identical arms in practice');
+  assert.equal(report.comparison.treatmentDelivery, 'doubtful');
+  assert.equal(report.comparison.signal, 'doubtful');
+  assert.equal(report.taskResults[0].comparison.signal, 'doubtful');
+  assert.equal(report.warnings[0].code, 'treatment-delivery');
+  assert.match(report.warnings[0].message, /with sent only 0 more input tokens per request than without/);
+  const terminal = renderTerminalReport(report, { color: false });
+  assert.match(terminal, /WARNING {2}Treatment delivery is doubtful/);
+  assert.match(terminal, /Evidence: doubtful;/);
+  assert.match(renderHtmlReport(report), /class="alert"[\s\S]*Treatment delivery is doubtful/);
 });
 
 test('an existing CLAUDE.md keeps its rules and gains the import', { skip }, async () => {

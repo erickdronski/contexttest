@@ -150,6 +150,8 @@ Before 0.3.0, Claude Code experiments with the default `AGENTS.md` never deliver
 
 For any other file name ContextTest cannot know whether the agent reads it, and both `doctor` and the report say so. If Claude Code exits before its first turn—for example because it does not recognize the configured model—the experiment is invalid rather than scored as agent failures.
 
+Every report also runs a passive delivery check. Instructions travel with every model request, so the arm with more instruction text should send more input tokens per request—roughly one token per four bytes of difference. When the observed difference is below a quarter of that, the report marks treatment delivery `doubtful`, prints a warning above the verdict, and withholds every confident evidence label. When the agent reports no usage, or usage varies between trials more than the treatment could explain, the check says `unknown` instead of guessing.
+
 ## A complete experiment
 
 ```json
@@ -356,6 +358,7 @@ Coding-agent behavior is stochastic. One run is a story, not a measurement.
 - Pass/fail disagreements use a two-sided exact paired test; the report exposes its p-value instead of hiding uncertainty behind a score.
 - `1–2` pairs are labeled anecdotal and `3–4` early regardless of effect size.
 - At five or more pairs, evidence remains directional until the paired p-value is at most `0.05`; `p ≤ 0.01` is labeled strong.
+- When token usage suggests the treatment never reached the agent, the label is `doubtful` regardless of sample size or p-value.
 
 The verdict is a practical leader, not a universal truth. It first considers a material task-success difference, then assertion adherence, then duration only when success is equal. The report also breaks results down by task so an aggregate win cannot quietly hide a task-specific regression. Tasks should represent real repository work, assertions should be deterministic, and conclusions should be replicated across repositories or task families.
 

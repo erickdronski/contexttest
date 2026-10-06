@@ -72,8 +72,28 @@ Pairs where both variants behave the same do not tell you which instruction set 
 | directional | at least five pairs without `p ≤ 0.05` |
 | convincing | paired `p ≤ 0.05` |
 | strong | paired `p ≤ 0.01` |
+| doubtful | token usage suggests the treatment never reached the agent; overrides every other label |
 
 Always interpret the label with task coverage, interval width, and replication. Statistical significance cannot rescue an unrepresentative task suite.
+
+## Treatment delivery check
+
+A comparison is only meaningful if the agent read the instructions. Every comparison carries `treatmentDelivery` and a `deliveryCheck` object with the evidence:
+
+| Field | Meaning |
+|---|---|
+| `status` | `consistent`, `doubtful`, or `unknown` |
+| `basis` | `request` when the agent reports its turn count (Claude Code), otherwise `trial` (Codex) |
+| `instructionBytes` | bytes each arm wrote to the instruction file |
+| `expectedTokens` | about one token per four bytes of difference |
+| `observedTokens` | median input tokens per request (or per trial) in the arm with more instructions, minus the other arm |
+| `ratio` | observed divided by expected |
+| `spreadTokens` | the larger within-arm median absolute deviation |
+| `reason` | the same finding in one sentence |
+
+Input tokens include cache reads and writes, since Claude Code reports cached prompt text separately. The check reports `doubtful` when the observed difference is below a quarter of the expected one and trial-to-trial variation is small enough to trust that. It reports `unknown` when the agent gives no usage, when the arms differ by fewer than about 25 tokens of instructions, or when usage varies more between trials than the treatment could explain. A `consistent` result means usage moved as it should—it does not prove the agent followed the instructions.
+
+The check exists because a real Claude Code experiment once compared two arms whose only difference was an `AGENTS.md` that Claude Code never loaded: about 500 bytes of rules, and only 25 more input tokens across three turns. That is a ratio near 0.07, and today it is labeled `doubtful`.
 
 ## Task breakdown
 

@@ -67,7 +67,7 @@ The bridge step exists because agents load different files on their own. Claude 
 | `src/lib/git.mjs` | Commit resolution, detached worktrees, variant application, delivery bridges, diff metrics | Refuses unsafe deletion and path/symlink escapes, including through an existing `CLAUDE.md` |
 | `src/lib/adapters.mjs` | Codex, Claude Code, custom-command, and mock execution; which instruction files each agent reads; runs that never started | Spawns argument arrays directly; no shell interpolation |
 | `src/lib/assertions.mjs` | Executable, filesystem, path, diff, and output checks | A task passes only when the agent and every assertion pass |
-| `src/lib/stats.mjs` | Summaries, Wilson intervals, paired exact test, verdict | Exposes uncertainty instead of collapsing evidence into one opaque score |
+| `src/lib/stats.mjs` | Summaries, Wilson intervals, paired exact test, treatment-delivery check, verdict | Exposes uncertainty instead of collapsing evidence into one opaque score; withholds confident labels when the treatment may not have arrived |
 | `src/lib/reporter.mjs` | Terminal, standalone HTML, and report regeneration | Escapes embedded data; reports remain portable files |
 | `src/action.mjs` | GitHub Action input/output adapter | Writes escaped multiline outputs and copies artifacts to the requested directory |
 
@@ -87,6 +87,7 @@ Experiment
     ├── aggregate variant summaries
     ├── task-level summaries
     ├── paired contingency table and exact p-value
+    ├── treatment-delivery check from token usage
     └── trial evidence: checks, files, diff, usage, diagnostics
 ```
 

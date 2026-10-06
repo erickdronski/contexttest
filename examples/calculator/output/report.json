@@ -88,13 +88,23 @@
           "pValue": 0.25000000000000006
         },
         "pValue": 0.25000000000000006,
-        "statisticallySignificant": false
+        "statisticallySignificant": false,
+        "treatmentDelivery": "unknown",
+        "deliveryCheck": {
+          "status": "unknown",
+          "reason": "The agent did not report token usage."
+        }
       }
     }
   ],
   "variants": [
     {
       "name": "without-instructions",
+      "instructions": {
+        "mode": "disabled",
+        "bytes": 0,
+        "digest": null
+      },
       "delivery": {
         "file": "AGENTS.md",
         "method": "unknown",
@@ -322,6 +332,12 @@
     },
     {
       "name": "with-instructions",
+      "instructions": {
+        "mode": "source",
+        "source": "AGENTS.candidate.md",
+        "bytes": 250,
+        "digest": "1d682c8d5cbe7d2f059577e31a726c6c18868ff061ee678e26ec12d76de2c7b3"
+      },
       "delivery": {
         "file": "AGENTS.md",
         "method": "unknown",
@@ -565,7 +581,12 @@
       "pValue": 0.25000000000000006
     },
     "pValue": 0.25000000000000006,
-    "statisticallySignificant": false
+    "statisticallySignificant": false,
+    "treatmentDelivery": "unknown",
+    "deliveryCheck": {
+      "status": "unknown",
+      "reason": "The agent did not report token usage."
+    }
   },
   "warnings": [],
   "artifacts": {

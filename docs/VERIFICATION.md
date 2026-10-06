@@ -14,7 +14,7 @@ ContextTest evaluates other systems, so its own evidence path must be inspectabl
 | end-to-end engine | [`test/integration.test.mjs`](../test/integration.test.mjs) | real temporary repository, paired worktrees, setup baseline, assertions, artifacts, cleanup |
 | treatment delivery | [`test/delivery.test.mjs`](../test/delivery.test.mjs) | a fake Claude Code that reads only `CLAUDE.md` receives `AGENTS.md` through the bridge in every arm; the bridge is excluded from metrics; existing `CLAUDE.md` rules are kept; unrecognized models and missing executables invalidate the experiment; `doctor` warns |
 | reporters | [`test/reporter.test.mjs`](../test/reporter.test.mjs) | standalone escaped HTML, terminal verdict, multi-ref task handling |
-| statistics | [`test/stats.test.mjs`](../test/stats.test.mjs) | medians, Wilson intervals, paired exact p-values, pairing keys, verdict rules |
+| statistics | [`test/stats.test.mjs`](../test/stats.test.mjs) | medians, Wilson intervals, paired exact p-values, pairing keys, verdict rules, evidence labels, and the treatment-delivery check against a measured failure |
 | process and secrets | [`test/utils.test.mjs`](../test/utils.test.mjs) | environment minimization, secret patterns, path containment, timeout truthfulness |
 | public documentation | [`test/documentation.test.mjs`](../test/documentation.test.mjs) | no broken local links, portable example data, JSON-to-HTML byte equality |
 | installed package | [`scripts/smoke-install.mjs`](../scripts/smoke-install.mjs) | packed tarball installs in a clean consumer repository and completes an experiment |
@@ -53,9 +53,10 @@ The test suite cannot call a paid agent, so [`test/delivery.test.mjs`](../test/d
 - an existing `CLAUDE.md` keeps its rules and gains the import, and a `CLAUDE.md` link to `AGENTS.md` is used as-is;
 - a `CLAUDE.md` link that points anywhere else is refused rather than written through;
 - an unrecognized model, a zero-turn exit, or a missing executable invalidates the experiment instead of becoming a scored failure;
-- `contexttest doctor` warns about the bridge and about a base-ref `CLAUDE.md` whose rules reach the baseline.
+- `contexttest doctor` warns about the bridge and about a base-ref `CLAUDE.md` whose rules reach the baseline;
+- an agent that reads nothing produces a `doubtful` delivery warning and label.
 
-A future agent release could change which files it loads. The fake cannot detect that; the per-trial usage recorded in every report and a periodic canary run can.
+A future agent release could change which files it loads. The fake cannot detect that, so every report also runs a passive delivery check over recorded token usage. [`test/stats.test.mjs`](../test/stats.test.mjs) pins it to the pattern a real failed experiment produced—about 500 bytes of instructions, 51,177 versus 51,202 input tokens over three turns—which must be labeled `doubtful`, and checks that noisy or missing usage yields `unknown` rather than a false alarm. The check can raise doubt; it cannot prove delivery. A periodic canary run against the real agent remains the strongest evidence.
 
 ## Demonstration golden files
 
