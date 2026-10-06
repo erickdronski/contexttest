@@ -178,6 +178,29 @@ export function interpolate(value, variables) {
   return String(value).replace(/\{([a-zA-Z][\w]*)\}/g, (_, name) => variables[name] ?? `{${name}}`);
 }
 
+// mulberry32: a small, well-mixed 32-bit generator. The same seed always
+// yields the same sequence on every platform and Node release.
+export function seededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function seededShuffle(items, seed) {
+  const random = seededRandom(seed);
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
+  }
+  return shuffled;
+}
+
 // JSON with object keys sorted, so equal settings always serialize equally.
 export function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;

@@ -85,6 +85,8 @@ Once the harness is trustworthy:
 contexttest run --attempts 5
 ```
 
+For runs long enough that providers or caches might drift, add `--seed <n>`: task and attempt blocks then run in a random order that the recorded seed reproduces.
+
 Five pairs can provide directional evidence. More pairs may be needed when disagreements are rare, outcomes are noisy, or the decision is expensive. Replicate important results on another day or commit.
 
 ## 7. Read the evidence in the right order

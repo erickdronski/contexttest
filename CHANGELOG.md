@@ -9,6 +9,7 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Claude Code experiments with the default `instructionFile: "AGENTS.md"` never delivered the treatment, because Claude Code reads `CLAUDE.md`; both arms were identical. Every Claude Code arm now gets the same `CLAUDE.md` containing `@AGENTS.md`, recorded per variant as `delivery`, excluded from agent metrics, and refused when `CLAUDE.md` links outside the treatment
 - An unrecognized Claude model, a Claude Code exit before its first turn, or a missing agent executable now invalidates the experiment instead of being scored as agent failure
 - Claude Code usage is parsed even when diagnostics precede the JSON result, and its turn count is recorded
+- `--attempts` crashed on a configuration without a `trials` object, and a value flag given without a value silently became `1`
 
 ### Added
 
@@ -20,6 +21,7 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Reports record each variant's exact invocation (prompt and worktree as placeholders) and the agent CLI's `--version` output
 - Per-variant `agent` overrides for comparing providers or models on the same instructions; validated by the runtime validator and the JSON schema. Reports show each arm's agent and state whether the instructions, the agent, both, or neither differed, with a warning when both did
 - Unknown variant keys are rejected, so a misspelled override cannot silently produce an A/A comparison
+- Seeded randomized task order: `trials.seed`, `--seed`, or the Action's `seed` input shuffles task and attempt blocks reproducibly; reports record `experiment.order` and `experiment.seed`
 
 ## [0.2.0] - 2026-07-24
 

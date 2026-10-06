@@ -133,3 +133,15 @@ test('the published schema and the runtime validator accept the same keys', asyn
   assert.deepEqual(Object.keys(schema.properties.variants.items.properties).sort(), [...VARIANT_KEYS].sort());
   assert.equal(schema.properties.variants.items.properties.agent.$ref, '#/$defs/agent');
 });
+
+test('validates the trial-order seed and rejects unknown trial settings', () => {
+  const config = createStarterConfig();
+  config.trials = { attempts: 3, seed: 7 };
+  assert.deepEqual(validateConfig(config), []);
+  for (const seed of [-1, 1.5, 2 ** 32, '7']) {
+    config.trials = { seed };
+    assert.match(validateConfig(config).join('\n'), /trials.seed must be an integer from 0 to 4294967295/);
+  }
+  config.trials = { atempts: 5 };
+  assert.match(validateConfig(config).join('\n'), /Unknown property trials.atempts/);
+});

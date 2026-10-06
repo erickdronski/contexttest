@@ -112,7 +112,7 @@ For untrusted code, prompts, models, or MCP servers, put the entire run inside a
 
 ## Concurrency and pairing
 
-Jobs are generated as `(task, attempt, variant)` tuples. Odd attempts schedule baseline then candidate; even attempts reverse that order. The pool limits simultaneous trials to the configured concurrency. This reduces systematic ordering bias, but it cannot remove provider drift or shared-cache contention.
+Jobs are generated as `(task, attempt, variant)` tuples. Odd attempts schedule baseline then candidate; even attempts reverse that order. With `trials.seed` (or `--seed`), the `(task, attempt)` blocks run in a reproducible random order—a seeded mulberry32 generator and a Fisher–Yates shuffle—while each block keeps both variants back to back and the alternation by attempt. The pool limits simultaneous trials to the configured concurrency. This reduces systematic ordering bias, but it cannot remove provider drift or shared-cache contention.
 
 Statistical pairing is by task name and attempt number—not by completion order. The exact paired test considers only disagreements: cases where one variant passes and the other fails.
 

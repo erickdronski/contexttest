@@ -4,6 +4,7 @@ import { exists, readJson, slug } from './utils.mjs';
 export const CONFIG_NAMES = ['contexttest.json', '.contexttest.json'];
 export const TOP_LEVEL_KEYS = ['$schema', 'version', 'project', 'baseRef', 'instructionFile', 'agent', 'trials', 'setup', 'environment', 'variants', 'tasks'];
 export const VARIANT_KEYS = ['name', 'disabled', 'source', 'content', 'agent'];
+export const TRIAL_KEYS = ['attempts', 'concurrency', 'seed'];
 export const PROVIDERS = ['codex', 'claude', 'command', 'mock'];
 
 // A variant's agent is the top-level agent with the variant's overrides on
@@ -164,6 +165,8 @@ export function validateConfig(config) {
   if (!Number.isInteger(attempts) || attempts < 1 || attempts > 50) errors.push('trials.attempts must be an integer from 1 to 50.');
   const concurrency = config.trials?.concurrency ?? 1;
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) errors.push('trials.concurrency must be an integer from 1 to 8.');
+  if (isObject(config.trials)) for (const name of Object.keys(config.trials)) if (!TRIAL_KEYS.includes(name)) errors.push(`Unknown property trials.${name}.`);
+  if (config.trials?.seed !== undefined && (!Number.isInteger(config.trials.seed) || config.trials.seed < 0 || config.trials.seed > 0xFFFFFFFF)) errors.push('trials.seed must be an integer from 0 to 4294967295.');
   if (config.setup !== undefined) {
     if (!config.setup || typeof config.setup !== 'object' || !Array.isArray(config.setup.commands)) errors.push('setup.commands must be an array of command argument arrays.');
     else for (const [index, command] of config.setup.commands.entries()) if (!commandArray(command)) errors.push(`setup.commands[${index}] must be a non-empty string argument array.`);

@@ -18,7 +18,9 @@
     "attemptsPerVariant": 3,
     "concurrency": 2,
     "setupCommands": 0,
-    "configDigest": "78658624f0de9bda2546d2668d85e6d1d6c3f96f5434fc3d81f5c30657e34918"
+    "configDigest": "78658624f0de9bda2546d2668d85e6d1d6c3f96f5434fc3d81f5c30657e34918",
+    "order": "sequential",
+    "seed": null
   },
   "runtime": {
     "node": "v20+",

@@ -16,7 +16,8 @@ const percent = (value) => `${Math.round((value ?? 0) * 100)}%`;
 
 async function main() {
   const loaded = await loadConfig(process.cwd(), input('config'));
-  if (input('attempts')) loaded.config.trials.attempts = Number(input('attempts'));
+  if (input('attempts')) loaded.config.trials = { ...loaded.config.trials, attempts: Number(input('attempts')) };
+  if (input('seed')) loaded.config.trials = { ...loaded.config.trials, seed: Number(input('seed')) };
   const report = await runExperiment({ ...loaded, taskFilter: input('task') || undefined, reportDir: input('report-dir') });
   await output('winner', report.comparison.winner);
   await output('report-json', report.artifacts.json);

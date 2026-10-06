@@ -11,11 +11,12 @@ ContextTest evaluates other systems, so its own evidence path must be inspectabl
 | configuration | [`test/config.test.mjs`](../test/config.test.mjs) | starter validity, bounds, duplicates, unsafe paths, provider-specific validation, per-variant agent merge and replacement, unknown variant keys, schema-to-validator key alignment |
 | Git/worktrees | [`test/git.test.mjs`](../test/git.test.mjs) | rename and binary metrics, symlink defenses, serialized registry mutations under parallel trials |
 | path globs | [`test/glob.test.mjs`](../test/glob.test.mjs) | `*`, `**`, and `?` path semantics |
-| end-to-end engine | [`test/integration.test.mjs`](../test/integration.test.mjs) | real temporary repository, paired worktrees, setup baseline, assertions, artifacts, cleanup, cross-agent comparisons and their treatment wording |
+| end-to-end engine | [`test/integration.test.mjs`](../test/integration.test.mjs) | real temporary repository, paired worktrees, setup baseline, assertions, artifacts, cleanup, cross-agent comparisons and their treatment wording, seeded schedules that never split a pair |
 | treatment delivery | [`test/delivery.test.mjs`](../test/delivery.test.mjs) | a fake Claude Code that reads only `CLAUDE.md` receives `AGENTS.md` through the bridge in every arm; the bridge is excluded from metrics; existing `CLAUDE.md` rules are kept; unrecognized models and missing executables invalidate the experiment; `doctor` warns |
 | reporters | [`test/reporter.test.mjs`](../test/reporter.test.mjs) | standalone escaped HTML, terminal verdict, multi-ref task handling |
 | statistics | [`test/stats.test.mjs`](../test/stats.test.mjs) | medians, Wilson intervals, paired exact p-values, pairing keys, verdict rules, evidence labels, and the treatment-delivery check against a measured failure |
-| process and secrets | [`test/utils.test.mjs`](../test/utils.test.mjs) | environment minimization, secret patterns, path containment, timeout truthfulness |
+| process and secrets | [`test/utils.test.mjs`](../test/utils.test.mjs) | environment minimization, secret patterns, path containment, timeout truthfulness, a seeded generator pinned so recorded seeds keep reproducing |
+| command line | [`test/cli.test.mjs`](../test/cli.test.mjs) | overrides on configs without `trials`, recorded seeds, value flags that refuse to run without a value |
 | public documentation | [`test/documentation.test.mjs`](../test/documentation.test.mjs) | no broken local links, portable example data, JSON-to-HTML byte equality |
 | installed package | [`scripts/smoke-install.mjs`](../scripts/smoke-install.mjs) | packed tarball installs in a clean consumer repository and completes an experiment |
 | GitHub Action | [`.github/workflows/ci.yml`](https://github.com/erickdronski/contexttest/blob/main/.github/workflows/ci.yml) | Action entrypoint executes from the repository and emits report artifacts |

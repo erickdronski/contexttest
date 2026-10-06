@@ -13,7 +13,7 @@ ContextTest — A/B testing for coding-agent instructions
 
 Usage
   contexttest init [--force]
-  contexttest run [--config path] [--task name] [--attempts n]
+  contexttest run [--config path] [--task name] [--attempts n] [--seed n]
                   [--keep-worktrees] [--report-dir path] [--json]
   contexttest doctor [--config path]
   contexttest report <report.json> [--output report.html]
@@ -26,6 +26,31 @@ Examples
 `;
 
 function log(message = '') { process.stdout.write(`${message}\n`); }
+
+// A flag given without a value parses as `true`; never let that become 1.
+function valueFlag(flags, name) {
+  const value = flags[name];
+  if (value === undefined) return undefined;
+  if (value === true) throw new Error(`--${name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)} requires a value.`);
+  return value;
+}
+
+function integerFlag(flags, name) {
+  const value = valueFlag(flags, name);
+  if (value === undefined) return undefined;
+  if (!/^-?\d+$/.test(value)) throw new Error(`--${name} must be an integer.`);
+  return Number(value);
+}
+
+// Command-line overrides replace config values; the engine validates bounds.
+async function loadWithOverrides(flags) {
+  const loaded = await loadConfig(process.cwd(), valueFlag(flags, 'config'));
+  const attempts = integerFlag(flags, 'attempts');
+  const seed = integerFlag(flags, 'seed');
+  if (attempts !== undefined) loaded.config.trials = { ...loaded.config.trials, attempts };
+  if (seed !== undefined) loaded.config.trials = { ...loaded.config.trials, seed };
+  return loaded;
+}
 function fail(error) { process.stderr.write(`ContextTest: ${error.message}\n`); process.exitCode = 1; }
 
 async function init(flags) {
@@ -43,17 +68,16 @@ async function init(flags) {
 }
 
 async function run(flags) {
-  const loaded = await loadConfig(process.cwd(), flags.config);
-  if (flags.attempts) loaded.config.trials.attempts = Number(flags.attempts);
+  const loaded = await loadWithOverrides(flags);
   let completed = 0;
   const report = await runExperiment({
     ...loaded,
-    taskFilter: flags.task,
+    taskFilter: valueFlag(flags, 'task'),
     keepWorktrees: Boolean(flags.keepWorktrees),
-    reportDir: flags.reportDir,
+    reportDir: valueFlag(flags, 'reportDir'),
     onEvent(event) {
       if (flags.json) return;
-      if (event.type === 'experiment:start') log(`\nRunning ${event.jobs} trials in isolated worktrees…`);
+      if (event.type === 'experiment:start') log(`\nRunning ${event.jobs} trials in isolated worktrees${event.order === 'seeded' ? ` (seeded order, seed ${event.seed})` : ''}…`);
       if (event.type === 'trial:complete' || event.type === 'trial:error') {
         completed += 1;
         const trial = event.trial;
@@ -76,7 +100,7 @@ async function doctor(flags) {
   };
   await checkExecutable('git');
   let loaded;
-  try { loaded = await loadConfig(process.cwd(), flags.config); checks.push({ name: 'configuration', pass: true, detail: loaded.configPath }); }
+  try { loaded = await loadConfig(process.cwd(), valueFlag(flags, 'config')); checks.push({ name: 'configuration', pass: true, detail: loaded.configPath }); }
   catch (error) { checks.push({ name: 'configuration', pass: false, detail: error.message }); }
   // One entry per distinct agent: variants may override the top-level agent.
   const agents = loaded ? [...new Map(variantAgents(loaded.config).map((agent) => [stableStringify(agent), agent])).values()] : [];
@@ -135,7 +159,7 @@ async function reportCommand(positional, flags) {
   const input = positional[1];
   if (!input) throw new Error('report requires a report.json path.');
   const data = JSON.parse(await readFile(path.resolve(input), 'utf8'));
-  const output = path.resolve(flags.output ?? path.join(path.dirname(input), 'report.html'));
+  const output = path.resolve(valueFlag(flags, 'output') ?? path.join(path.dirname(input), 'report.html'));
   await writeFile(output, renderHtmlReport(data), 'utf8');
   log(`Wrote ${output}`);
 }

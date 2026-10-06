@@ -15,6 +15,9 @@ inputs:
   attempts:
     description: Optional number of attempts per variant.
     required: false
+  seed:
+    description: Optional seed for a reproducible random task order.
+    required: false
   report-dir:
     description: Directory for report.json and report.html.
     required: false

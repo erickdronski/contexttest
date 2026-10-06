@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { environmentSecrets, findExecutable, isPathInside, redact, runProcess, safeEnvironment, timestampId } from '../src/lib/utils.mjs';
+import { environmentSecrets, findExecutable, isPathInside, redact, runProcess, safeEnvironment, seededRandom, seededShuffle, stableStringify, timestampId } from '../src/lib/utils.mjs';
 
 test('redacts common token formats and explicit values', () => {
   const output = redact('key=sk-abcdefghijklmnopqrstuvwxyz secret=hunter2-value', ['hunter2-value']);
@@ -39,4 +39,23 @@ test('explicitly allowed and configured environment values are treated as secret
   const secrets = environmentSecrets({ allow: ['GENERIC_VALUE'], set: { FIXED_VALUE: 'configured-secret' } }, { GENERIC_VALUE: 'allowed-secret', PATH: '/bin' });
   assert.equal(secrets.includes('allowed-secret'), true);
   assert.equal(secrets.includes('configured-secret'), true);
+});
+
+test('seeded randomness is reproducible and shuffles into a permutation', () => {
+  const first = seededRandom(42);
+  const second = seededRandom(42);
+  const draws = Array.from({ length: 5 }, () => first());
+  assert.deepEqual(Array.from({ length: 5 }, () => second()), draws);
+  assert.ok(draws.every((value) => value >= 0 && value < 1));
+  assert.equal(draws[0], 0.6011037519201636, 'the generator must not change between releases, or recorded seeds stop reproducing');
+  const items = Array.from({ length: 20 }, (_, index) => index);
+  const shuffled = seededShuffle(items, 7);
+  assert.deepEqual([...shuffled].sort((a, b) => a - b), items);
+  assert.deepEqual(seededShuffle(items, 7), shuffled);
+  assert.notDeepEqual(shuffled, items);
+});
+
+test('stable serialization ignores key order', () => {
+  assert.equal(stableStringify({ b: 1, a: [{ d: 2, c: 3 }] }), stableStringify({ a: [{ c: 3, d: 2 }], b: 1 }));
+  assert.notEqual(stableStringify({ a: 1 }), stableStringify({ a: '1' }));
 });

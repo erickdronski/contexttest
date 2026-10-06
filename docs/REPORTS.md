@@ -118,6 +118,8 @@ Each trial records:
 
 The JSON also records resolved commits per task, configuration digest, runner version, runtime metadata, setup-command count, and the comparison data needed to reproduce the terminal verdict.
 
+`experiment.order` is `sequential` or `seeded`; `experiment.seed` is the seed that reproduces a seeded order, and the HTML footer shows it.
+
 Two fields make agent runs reproducible across machines and releases:
 
 - `runtime.agents[]` lists each agent's provider, configured executable, and the first line of its `--version` output (Codex and Claude Code only; custom commands are never probed);

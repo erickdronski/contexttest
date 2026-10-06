@@ -8,7 +8,7 @@ import { applyDeliveryBridge, applyVariant, assertGitRepository, createWorktree,
 import { validateConfig, variantAgents } from './config.mjs';
 import { renderHtmlReport } from './reporter.mjs';
 import { assessTreatmentDelivery, compareVariants, pairTrials, summarizeTrials } from './stats.mjs';
-import { ensureDir, environmentSecrets, isPathInside, redact, runProcess, safeEnvironment, slug, stableStringify, timestampId, VERSION, writeJson } from './utils.mjs';
+import { ensureDir, environmentSecrets, isPathInside, redact, runProcess, safeEnvironment, seededShuffle, slug, stableStringify, timestampId, VERSION, writeJson } from './utils.mjs';
 
 async function pool(items, concurrency, worker) {
   const results = new Array(items.length);
@@ -147,16 +147,23 @@ export async function prepareRun({ config, root, taskFilter, reportDir }) {
 
 // Jobs are (task, attempt, arm) tuples. Within one task and attempt every arm
 // runs back to back, and the arm order reverses on even attempts so no arm
-// systematically runs first.
-export function scheduleTrials({ tasks, arms, attempts }) {
+// systematically runs first. With a seed, the (task, attempt) blocks run in a
+// reproducible random order, so slow drift over a long run is not lined up
+// with the task list; each block still keeps its arms together.
+export function scheduleTrials({ tasks, arms, attempts, seed = null }) {
+  const blocks = [];
+  for (const task of tasks) for (let attempt = 1; attempt <= attempts; attempt += 1) blocks.push({ task, attempt });
   const jobs = [];
-  for (const task of tasks) {
-    for (let attempt = 1; attempt <= attempts; attempt += 1) {
-      const ordered = attempt % 2 ? arms : [...arms].reverse();
-      for (const arm of ordered) jobs.push({ arm, variant: arm.variant, armIndex: arms.indexOf(arm), task, attempt });
-    }
+  for (const { task, attempt } of seed === null ? blocks : seededShuffle(blocks, seed)) {
+    const ordered = attempt % 2 ? arms : [...arms].reverse();
+    for (const arm of ordered) jobs.push({ arm, variant: arm.variant, armIndex: arms.indexOf(arm), task, attempt });
   }
   return jobs;
+}
+
+export function trialOrder(config) {
+  const seed = Number.isInteger(config.trials?.seed) ? config.trials.seed : null;
+  return { order: seed === null ? 'sequential' : 'seeded', seed };
 }
 
 export async function runAgentVersions(agents, environment) {
@@ -243,8 +250,9 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
   const agentRuntime = await runAgentVersions(agents, config.environment);
   await run.createDirectories();
   const attempts = config.trials?.attempts ?? 3;
-  const jobs = scheduleTrials({ tasks: run.tasks, arms, attempts });
-  onEvent({ type: 'experiment:start', runId: run.runId, jobs: jobs.length });
+  const order = trialOrder(config);
+  const jobs = scheduleTrials({ tasks: run.tasks, arms, attempts, seed: order.seed });
+  onEvent({ type: 'experiment:start', runId: run.runId, jobs: jobs.length, ...order });
   const trialResults = await executeTrials({ config, root, run, jobs, keepWorktrees, onEvent });
   const { variants, comparison, taskResults } = analyzeExperiment({
     variants: arms.map((arm, index) => ({
@@ -276,6 +284,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
       concurrency: config.trials?.concurrency ?? 1,
       setupCommands: config.setup?.commands?.length ?? 0,
       configDigest: configDigest(config),
+      ...order,
     },
     runtime: runtimeMetadata(agentRuntime),
     tasks: run.tasks.map(({ name }) => name),

@@ -102,7 +102,7 @@ flowchart LR
   S --> R["Terminal + JSON + HTML"]
 ```
 
-Each task/attempt pair differs only by its instruction treatment. Setup is recorded before agent-change metrics, variant order alternates across attempts, and pairing uses task plus attempt—not completion order. Infrastructure failures invalidate the experiment instead of being counted as model failures.
+Each task/attempt pair differs only by its instruction treatment. Setup is recorded before agent-change metrics, variant order alternates across attempts, an optional seed shuffles the order of task/attempt pairs reproducibly, and pairing uses task plus attempt—not completion order. Infrastructure failures invalidate the experiment instead of being counted as model failures.
 
 The [architecture guide](docs/ARCHITECTURE.md) maps every component, lifecycle transition, trust boundary, extension surface, and report field.
 
@@ -236,6 +236,7 @@ contexttest init                         # create a starter experiment
 contexttest run                          # run every configured task
 contexttest run --task pagination        # run one task
 contexttest run --attempts 10            # override repetitions
+contexttest run --seed 42                # reproducible random task order
 contexttest run --keep-worktrees         # retain trial worktrees for debugging
 contexttest run --json                   # emit the report as one JSON line
 contexttest doctor                       # verify config, refs, files, tools, and Git state
@@ -397,7 +398,7 @@ The JSON report records resolved task commits, a configuration digest, runtime m
 
 ## Experimental limits
 
-Detached worktrees isolate repository changes, not the rest of the machine. Agent accounts, provider availability, network responses, package caches, MCP servers, agent CLI releases, and model versions can all change between runs; `agent.isolate` removes the user-level agent setup, and reports record the agent's version. Concurrency can also introduce shared-cache contention. Use low concurrency for latency comparisons, pin models where providers allow it, keep setup deterministic, and replicate important conclusions on another day.
+Detached worktrees isolate repository changes, not the rest of the machine. Agent accounts, provider availability, network responses, package caches, MCP servers, agent CLI releases, and model versions can all change between runs; `agent.isolate` removes the user-level agent setup, and reports record the agent's version. Concurrency can also introduce shared-cache contention. Use low concurrency for latency comparisons, pin models where providers allow it, keep setup deterministic, set `trials.seed` (or `--seed`) on long runs so drift is not lined up with your task list, and replicate important conclusions on another day.
 
 ## Deterministic demo
 

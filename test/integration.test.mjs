@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import os from 'node:os';
 import path from 'node:path';
-import { describeAgent, describeTreatment, runExperiment } from '../src/lib/engine.mjs';
+import { describeAgent, describeTreatment, runExperiment, scheduleTrials } from '../src/lib/engine.mjs';
 import { renderHtmlReport, renderTerminalReport } from '../src/lib/reporter.mjs';
 
 const exec = promisify(execFile);
@@ -125,4 +125,22 @@ test('names both changes when instructions and agent differ, and recognizes an A
   const same = describeTreatment(arm(codex, 'abc'), arm(codex, 'abc'), [codex, codex]);
   assert.deepEqual(same.differs, []);
   assert.match(same.summary, /A\/A comparison/);
+});
+
+test('a seed shuffles task and attempt blocks reproducibly without splitting pairs', () => {
+  const tasks = ['alpha', 'beta', 'gamma'].map((name) => ({ name }));
+  const arms = [{ name: 'baseline' }, { name: 'candidate' }];
+  const describe = (jobs) => jobs.map((job) => `${job.task.name}#${job.attempt}:${job.arm.name}`);
+  const sequential = describe(scheduleTrials({ tasks, arms, attempts: 4 }));
+  assert.deepEqual(sequential.slice(0, 4), ['alpha#1:baseline', 'alpha#1:candidate', 'alpha#2:candidate', 'alpha#2:baseline']);
+  const seeded = scheduleTrials({ tasks, arms, attempts: 4, seed: 11 });
+  assert.deepEqual(describe(scheduleTrials({ tasks, arms, attempts: 4, seed: 11 })), describe(seeded));
+  assert.notDeepEqual(describe(seeded), sequential);
+  assert.notDeepEqual(describe(scheduleTrials({ tasks, arms, attempts: 4, seed: 12 })), describe(seeded));
+  assert.deepEqual([...describe(seeded)].sort(), [...sequential].sort());
+  for (let index = 0; index < seeded.length; index += 2) {
+    const [first, second] = [seeded[index], seeded[index + 1]];
+    assert.equal(`${first.task.name}#${first.attempt}`, `${second.task.name}#${second.attempt}`, 'both arms of a pair run back to back');
+    assert.equal(first.arm.name, first.attempt % 2 ? 'baseline' : 'candidate', 'order still alternates by attempt');
+  }
 });
