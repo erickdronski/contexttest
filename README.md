@@ -9,7 +9,8 @@
   <a href="docs/REPORTS.md">Read the reports</a> ·
   <a href="docs/VERIFICATION.md">Verification</a> ·
   <a href="examples/calculator/README.md">Live demonstration</a> ·
-  <a href="examples/ablation/README.md">Ablation demo</a>
+  <a href="examples/ablation/README.md">Ablation demo</a> ·
+  <a href="examples/aggregate/README.md">Aggregation demo</a>
 </p>
 
 <h1 align="center">ContextTest</h1>
@@ -242,6 +243,7 @@ contexttest run --keep-worktrees         # retain trial worktrees for debugging
 contexttest run --json                   # emit the report as one JSON line
 contexttest ablate                       # measure each instruction section's marginal effect
 contexttest ablate --dry-run             # print the section outline and run budget only
+contexttest aggregate a.json b.json      # pool compatible experiment reports
 contexttest doctor                       # verify config, refs, files, tools, and Git state
 contexttest report path/report.json      # regenerate the HTML for any report kind
 ```
@@ -252,7 +254,7 @@ Exit codes:
 |---:|---|
 | `0` | Candidate leads or there is no clear winner; an ablation completed |
 | `1` | Configuration or infrastructure failure |
-| `2` | Baseline leads; useful as a CI regression gate |
+| `2` | Baseline leads—in a run or a pooled aggregate; useful as a CI regression gate |
 
 ## Find out which sections earn their place
 
@@ -272,6 +274,20 @@ The full arm is shared: each ablation arm is paired with it by task and attempt,
 For each section the report shows the change in success, assertion adherence, duration, diff size, and cost when the agent reports it (full file minus file without the section), an exact paired p-value, a Holm-adjusted p-value across sections, and the usual evidence labels computed from the adjusted value. A section **helps** or **hurts** only when success or adherence differs; duration and cost are shown as measurements, never verdicts, because a median over a few runs is too noisy to judge on. With few attempts, "no clear effect" means a section is untested, not useless. The report includes section headings but never section bodies.
 
 See the [ablation demonstration](examples/ablation/README.md) and its [committed report](examples/ablation/output/report.html).
+
+## Pool runs as evidence accumulates
+
+Three attempts per variant is early evidence, and rerunning old trials to reach five or ten wastes money. `contexttest aggregate` pools the reports you already have:
+
+```bash
+contexttest aggregate runs/2026-10-01/report.json runs/2026-10-06/report.json --out pooled
+```
+
+Pairs stay inside their own run—attempts are renumbered per source—so the pooled exact test only counts disagreements between arms that ran side by side. Every source run is also analyzed on its own and shown beside the pooled result, with a heterogeneity summary: when runs disagree on the leader, the report says so instead of letting the average hide it.
+
+Aggregation refuses reports whose variant names, variant order, or task sets differ, and refuses to count the same run twice. It pools—but warns about and records—differences in configuration digest, agent or model, instruction digest, task refs, project, or ContextTest version, because accumulating evidence across commits and days is the purpose. Source diagnostics stay in the source reports; the aggregate keeps compact trials, enough to recompute every number.
+
+See the [aggregation demonstration](examples/aggregate/README.md) and its [committed report](examples/aggregate/output/report.html).
 
 ## Compare agents and models
 
@@ -432,7 +448,7 @@ npm run demo
 
 Expected outcome: three baseline trials fail the repository behavior check, three candidate trials pass, and ContextTest produces a paired verdict plus JSON and HTML artifacts.
 
-The complete [calculator walkthrough](examples/calculator/README.md) maps the treatment, fixture, assertions, expected failure, and every output file. `npm run demo:ablate` runs the [ablation demonstration](examples/ablation/README.md): three instruction sections, of which only one changes the mock agent's behavior—and the report finds it. Its [committed HTML](examples/calculator/output/report.html) and [JSON](examples/calculator/output/report.json) let users inspect the result before running anything.
+The complete [calculator walkthrough](examples/calculator/README.md) maps the treatment, fixture, assertions, expected failure, and every output file. `npm run demo:ablate` runs the [ablation demonstration](examples/ablation/README.md): three instruction sections, of which only one changes the mock agent's behavior—and the report finds it. `npm run demo:aggregate` pools two committed calculator runs in the [aggregation demonstration](examples/aggregate/README.md). Its [committed HTML](examples/calculator/output/report.html) and [JSON](examples/calculator/output/report.json) let users inspect the result before running anything.
 
 The mock is only a product demonstration. It is clearly identified as such and must never be presented as evidence about a real model. Maintainers can regenerate every portable golden artifact with `npm run demo:update`; tests require each committed HTML file to match the JSON reporter byte for byte.
 

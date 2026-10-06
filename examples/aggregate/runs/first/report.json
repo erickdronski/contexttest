@@ -1,0 +1,630 @@
+{
+  "schemaVersion": 1,
+  "kind": "experiment",
+  "version": "0.2.0",
+  "runId": "calculator-demo-run-1",
+  "generatedAt": "2026-07-24T00:00:00.000Z",
+  "project": "calculator-demo",
+  "commit": "0000000000000000000000000000000000000000",
+  "taskRefs": {
+    "safe-division": "0000000000000000000000000000000000000000"
+  },
+  "instructionFile": "AGENTS.md",
+  "agent": {
+    "provider": "mock",
+    "model": null,
+    "isolate": false
+  },
+  "experiment": {
+    "attemptsPerVariant": 3,
+    "concurrency": 2,
+    "setupCommands": 0,
+    "configDigest": "78658624f0de9bda2546d2668d85e6d1d6c3f96f5434fc3d81f5c30657e34918",
+    "order": "sequential",
+    "seed": null
+  },
+  "runtime": {
+    "node": "v20+",
+    "platform": "portable-example",
+    "arch": "portable",
+    "agents": [
+      {
+        "provider": "mock",
+        "executable": "mock",
+        "version": null
+      }
+    ]
+  },
+  "tasks": [
+    "safe-division"
+  ],
+  "taskResults": [
+    {
+      "name": "safe-division",
+      "ref": "0000000000000000000000000000000000000000",
+      "variants": [
+        {
+          "name": "without-instructions",
+          "summary": {
+            "attempts": 3,
+            "successes": 0,
+            "passRate": 0,
+            "passRateInterval": [
+              0,
+              0.5615060804490177
+            ],
+            "medianDurationMs": 314,
+            "medianCostUsd": null,
+            "medianDiffLines": 4,
+            "medianChangedFiles": 1,
+            "meanAssertionScore": 0.8000000000000002,
+            "medianInputTokens": 0,
+            "medianOutputTokens": 0
+          }
+        },
+        {
+          "name": "with-instructions",
+          "summary": {
+            "attempts": 3,
+            "successes": 3,
+            "passRate": 1,
+            "passRateInterval": [
+              0.43849391955098227,
+              1
+            ],
+            "medianDurationMs": 294,
+            "medianCostUsd": null,
+            "medianDiffLines": 4,
+            "medianChangedFiles": 1,
+            "meanAssertionScore": 1,
+            "medianInputTokens": 0,
+            "medianOutputTokens": 0
+          }
+        }
+      ],
+      "comparison": {
+        "winner": "candidate",
+        "basis": "success",
+        "reason": "100 percentage-point difference in task success.",
+        "passRateDelta": 1,
+        "assertionScoreDelta": 0.19999999999999984,
+        "signal": "early",
+        "minimumAttempts": 3,
+        "paired": {
+          "pairs": 3,
+          "leftWins": 0,
+          "rightWins": 3,
+          "bothPass": 0,
+          "bothFail": 0,
+          "discordant": 3,
+          "pValue": 0.25000000000000006
+        },
+        "pValue": 0.25000000000000006,
+        "statisticallySignificant": false,
+        "treatmentDelivery": "unknown",
+        "deliveryCheck": {
+          "status": "unknown",
+          "reason": "The agent did not report token usage."
+        }
+      }
+    }
+  ],
+  "variants": [
+    {
+      "name": "without-instructions",
+      "agent": {
+        "provider": "mock",
+        "model": null,
+        "isolate": false,
+        "digest": "90890dd2a12129e8"
+      },
+      "instructions": {
+        "mode": "disabled",
+        "bytes": 0,
+        "digest": null
+      },
+      "delivery": {
+        "file": "AGENTS.md",
+        "method": "unknown",
+        "bridgedVia": null
+      },
+      "invocation": null,
+      "trials": [
+        {
+          "id": "safe-division-without-instructions-1",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 1,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 312,
+          "assertions": [
+            {
+              "type": "agentExitCode",
+              "pass": true,
+              "message": "Agent completed successfully.",
+              "actual": 0,
+              "expected": 0
+            },
+            {
+              "type": "command",
+              "pass": false,
+              "message": "node exited 1.",
+              "actual": 1,
+              "expected": 0,
+              "durationMs": 120,
+              "timedOut": false,
+              "stdout": "Test failed: the existing add export was not preserved.\n",
+              "stderr": ""
+            },
+            {
+              "type": "allowedPaths",
+              "pass": true,
+              "message": "All changes stayed inside allowed paths.",
+              "violations": []
+            },
+            {
+              "type": "maxChangedFiles",
+              "pass": true,
+              "message": "1 changed file; limit 2.",
+              "actual": 1,
+              "expected": 2
+            },
+            {
+              "type": "maxDiffLines",
+              "pass": true,
+              "message": "4 changed lines; limit 25.",
+              "actual": 4,
+              "expected": 25
+            }
+          ],
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          },
+          "exitCode": 0,
+          "timedOut": false,
+          "stdout": "Completed without repository instructions.\n",
+          "stderr": ""
+        },
+        {
+          "id": "safe-division-without-instructions-2",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 2,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 314,
+          "assertions": [
+            {
+              "type": "agentExitCode",
+              "pass": true,
+              "message": "Agent completed successfully.",
+              "actual": 0,
+              "expected": 0
+            },
+            {
+              "type": "command",
+              "pass": false,
+              "message": "node exited 1.",
+              "actual": 1,
+              "expected": 0,
+              "durationMs": 120,
+              "timedOut": false,
+              "stdout": "Test failed: the existing add export was not preserved.\n",
+              "stderr": ""
+            },
+            {
+              "type": "allowedPaths",
+              "pass": true,
+              "message": "All changes stayed inside allowed paths.",
+              "violations": []
+            },
+            {
+              "type": "maxChangedFiles",
+              "pass": true,
+              "message": "1 changed file; limit 2.",
+              "actual": 1,
+              "expected": 2
+            },
+            {
+              "type": "maxDiffLines",
+              "pass": true,
+              "message": "4 changed lines; limit 25.",
+              "actual": 4,
+              "expected": 25
+            }
+          ],
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          },
+          "exitCode": 0,
+          "timedOut": false,
+          "stdout": "Completed without repository instructions.\n",
+          "stderr": ""
+        },
+        {
+          "id": "safe-division-without-instructions-3",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 3,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 316,
+          "assertions": [
+            {
+              "type": "agentExitCode",
+              "pass": true,
+              "message": "Agent completed successfully.",
+              "actual": 0,
+              "expected": 0
+            },
+            {
+              "type": "command",
+              "pass": false,
+              "message": "node exited 1.",
+              "actual": 1,
+              "expected": 0,
+              "durationMs": 120,
+              "timedOut": false,
+              "stdout": "Test failed: the existing add export was not preserved.\n",
+              "stderr": ""
+            },
+            {
+              "type": "allowedPaths",
+              "pass": true,
+              "message": "All changes stayed inside allowed paths.",
+              "violations": []
+            },
+            {
+              "type": "maxChangedFiles",
+              "pass": true,
+              "message": "1 changed file; limit 2.",
+              "actual": 1,
+              "expected": 2
+            },
+            {
+              "type": "maxDiffLines",
+              "pass": true,
+              "message": "4 changed lines; limit 25.",
+              "actual": 4,
+              "expected": 25
+            }
+          ],
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          },
+          "exitCode": 0,
+          "timedOut": false,
+          "stdout": "Completed without repository instructions.\n",
+          "stderr": ""
+        }
+      ],
+      "summary": {
+        "attempts": 3,
+        "successes": 0,
+        "passRate": 0,
+        "passRateInterval": [
+          0,
+          0.5615060804490177
+        ],
+        "medianDurationMs": 314,
+        "medianCostUsd": null,
+        "medianDiffLines": 4,
+        "medianChangedFiles": 1,
+        "meanAssertionScore": 0.8000000000000002,
+        "medianInputTokens": 0,
+        "medianOutputTokens": 0
+      }
+    },
+    {
+      "name": "with-instructions",
+      "agent": {
+        "provider": "mock",
+        "model": null,
+        "isolate": false,
+        "digest": "90890dd2a12129e8"
+      },
+      "instructions": {
+        "mode": "source",
+        "source": "AGENTS.candidate.md",
+        "bytes": 250,
+        "digest": "1d682c8d5cbe7d2f059577e31a726c6c18868ff061ee678e26ec12d76de2c7b3"
+      },
+      "delivery": {
+        "file": "AGENTS.md",
+        "method": "unknown",
+        "bridgedVia": null
+      },
+      "invocation": null,
+      "trials": [
+        {
+          "id": "safe-division-with-instructions-1",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 1,
+          "passed": true,
+          "score": 1,
+          "durationMs": 292,
+          "assertions": [
+            {
+              "type": "agentExitCode",
+              "pass": true,
+              "message": "Agent completed successfully.",
+              "actual": 0,
+              "expected": 0
+            },
+            {
+              "type": "command",
+              "pass": true,
+              "message": "node passed.",
+              "actual": 0,
+              "expected": 0,
+              "durationMs": 120,
+              "timedOut": false,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "type": "allowedPaths",
+              "pass": true,
+              "message": "All changes stayed inside allowed paths.",
+              "violations": []
+            },
+            {
+              "type": "maxChangedFiles",
+              "pass": true,
+              "message": "1 changed file; limit 2.",
+              "actual": 1,
+              "expected": 2
+            },
+            {
+              "type": "maxDiffLines",
+              "pass": true,
+              "message": "4 changed lines; limit 25.",
+              "actual": 4,
+              "expected": 25
+            }
+          ],
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          },
+          "exitCode": 0,
+          "timedOut": false,
+          "stdout": "Completed with repository instructions.\n",
+          "stderr": ""
+        },
+        {
+          "id": "safe-division-with-instructions-2",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 2,
+          "passed": true,
+          "score": 1,
+          "durationMs": 294,
+          "assertions": [
+            {
+              "type": "agentExitCode",
+              "pass": true,
+              "message": "Agent completed successfully.",
+              "actual": 0,
+              "expected": 0
+            },
+            {
+              "type": "command",
+              "pass": true,
+              "message": "node passed.",
+              "actual": 0,
+              "expected": 0,
+              "durationMs": 120,
+              "timedOut": false,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "type": "allowedPaths",
+              "pass": true,
+              "message": "All changes stayed inside allowed paths.",
+              "violations": []
+            },
+            {
+              "type": "maxChangedFiles",
+              "pass": true,
+              "message": "1 changed file; limit 2.",
+              "actual": 1,
+              "expected": 2
+            },
+            {
+              "type": "maxDiffLines",
+              "pass": true,
+              "message": "4 changed lines; limit 25.",
+              "actual": 4,
+              "expected": 25
+            }
+          ],
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          },
+          "exitCode": 0,
+          "timedOut": false,
+          "stdout": "Completed with repository instructions.\n",
+          "stderr": ""
+        },
+        {
+          "id": "safe-division-with-instructions-3",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 3,
+          "passed": true,
+          "score": 1,
+          "durationMs": 296,
+          "assertions": [
+            {
+              "type": "agentExitCode",
+              "pass": true,
+              "message": "Agent completed successfully.",
+              "actual": 0,
+              "expected": 0
+            },
+            {
+              "type": "command",
+              "pass": true,
+              "message": "node passed.",
+              "actual": 0,
+              "expected": 0,
+              "durationMs": 120,
+              "timedOut": false,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "type": "allowedPaths",
+              "pass": true,
+              "message": "All changes stayed inside allowed paths.",
+              "violations": []
+            },
+            {
+              "type": "maxChangedFiles",
+              "pass": true,
+              "message": "1 changed file; limit 2.",
+              "actual": 1,
+              "expected": 2
+            },
+            {
+              "type": "maxDiffLines",
+              "pass": true,
+              "message": "4 changed lines; limit 25.",
+              "actual": 4,
+              "expected": 25
+            }
+          ],
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          },
+          "exitCode": 0,
+          "timedOut": false,
+          "stdout": "Completed with repository instructions.\n",
+          "stderr": ""
+        }
+      ],
+      "summary": {
+        "attempts": 3,
+        "successes": 3,
+        "passRate": 1,
+        "passRateInterval": [
+          0.43849391955098227,
+          1
+        ],
+        "medianDurationMs": 294,
+        "medianCostUsd": null,
+        "medianDiffLines": 4,
+        "medianChangedFiles": 1,
+        "meanAssertionScore": 1,
+        "medianInputTokens": 0,
+        "medianOutputTokens": 0
+      }
+    }
+  ],
+  "treatment": {
+    "differs": [
+      "instructions"
+    ],
+    "agentSettings": [],
+    "summary": "Only the instructions differ; both arms use mock."
+  },
+  "comparison": {
+    "winner": "candidate",
+    "basis": "success",
+    "reason": "100 percentage-point difference in task success.",
+    "passRateDelta": 1,
+    "assertionScoreDelta": 0.19999999999999984,
+    "signal": "early",
+    "minimumAttempts": 3,
+    "paired": {
+      "pairs": 3,
+      "leftWins": 0,
+      "rightWins": 3,
+      "bothPass": 0,
+      "bothFail": 0,
+      "discordant": 3,
+      "pValue": 0.25000000000000006
+    },
+    "pValue": 0.25000000000000006,
+    "statisticallySignificant": false,
+    "treatmentDelivery": "unknown",
+    "deliveryCheck": {
+      "status": "unknown",
+      "reason": "The agent did not report token usage."
+    }
+  },
+  "warnings": [],
+  "artifacts": {
+    "json": "examples/aggregate/runs/first/report.json",
+    "html": "examples/aggregate/runs/first/report.html"
+  }
+}

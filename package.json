@@ -36,6 +36,7 @@
     "smoke:install": "node scripts/smoke-install.mjs",
     "demo": "node src/cli.mjs run --config examples/calculator/contexttest.json",
     "demo:ablate": "node src/cli.mjs ablate --config examples/ablation/contexttest.json",
+    "demo:aggregate": "node src/cli.mjs aggregate examples/aggregate/runs/first/report.json examples/aggregate/runs/second/report.json",
     "demo:update": "node scripts/update-demo-output.mjs",
     "doctor": "node src/cli.mjs doctor",
     "prepublishOnly": "npm run check"

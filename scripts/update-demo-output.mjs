@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { analyzeAblation, runAblation } from '../src/lib/ablation.mjs';
+import { aggregateReports } from '../src/lib/aggregate.mjs';
 import { loadConfig } from '../src/lib/config.mjs';
 import { analyzeExperiment, runExperiment } from '../src/lib/engine.mjs';
 import { renderReport, renderReportTerminal } from '../src/lib/reporter.mjs';
@@ -38,10 +39,10 @@ function portable(source, runId, directory) {
   };
 }
 
-async function calculator() {
+async function calculator(runId = 'calculator-demo-example', directory = 'examples/calculator/output') {
   const loaded = await loadConfig(repository, path.join(repository, 'examples/calculator/contexttest.json'));
   const source = await runExperiment(loaded);
-  const metadata = portable(source, 'calculator-demo-example', 'examples/calculator/output');
+  const metadata = portable(source, runId, directory);
   const { variants, comparison, taskResults } = analyzeExperiment({
     variants: source.variants.map(({ summary, ...variant }, variantIndex) => ({
       ...variant,
@@ -55,7 +56,7 @@ async function calculator() {
     taskRefs: metadata.taskRefs,
     provider: source.agent.provider,
   });
-  return { report: { ...source, ...metadata, variants, taskResults, comparison }, directory: 'examples/calculator/output' };
+  return { report: { ...source, ...metadata, variants, taskResults, comparison }, directory };
 }
 
 async function ablation() {
@@ -76,8 +77,25 @@ async function ablation() {
   return { report: { ...source, ...metadata, arms, effects }, directory: 'examples/ablation/output' };
 }
 
-for (const example of [calculator, ablation]) {
-  const { report, directory } = await example();
+// Two more independent runs of the calculator experiment, pooled. Each source
+// is a complete experiment report; the aggregate is computed from them exactly
+// as `contexttest aggregate` would.
+async function aggregate() {
+  const sources = [];
+  for (const [runId, name] of [['calculator-demo-run-1', 'first'], ['calculator-demo-run-2', 'second']]) {
+    const { report, directory } = await calculator(runId, `examples/aggregate/runs/${name}`);
+    await save({ report, directory });
+    sources.push({ path: `${directory}/report.json`, report });
+  }
+  const pooled = aggregateReports(sources);
+  const directory = 'examples/aggregate/output';
+  return {
+    report: { ...pooled, aggregateId: 'calculator-aggregate-example', generatedAt: '2026-07-24T00:00:00.000Z', artifacts: { json: `${directory}/report.json`, html: `${directory}/report.html` } },
+    directory,
+  };
+}
+
+async function save({ report, directory }) {
   const output = path.join(repository, directory);
   await ensureDir(output);
   await writeJson(path.join(output, 'report.json'), report);
@@ -85,3 +103,5 @@ for (const example of [calculator, ablation]) {
   process.stdout.write(renderReportTerminal(report, { color: false }));
   process.stdout.write(`Updated ${directory}.\n`);
 }
+
+for (const example of [calculator, ablation, aggregate]) await save(await example());

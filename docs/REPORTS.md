@@ -137,6 +137,7 @@ Every report carries `kind` and `schemaVersion`. A kind's fields can grow within
 |---|---|---|
 | `experiment` | `contexttest run` and the GitHub Action | 1 |
 | `ablation` | `contexttest ablate` | 1 |
+| `aggregate` | `contexttest aggregate` | 1 |
 
 `contexttest report` reads the kind and refuses an unknown kind, or a schema version newer than it understands, rather than rendering something misleading.
 
@@ -159,6 +160,26 @@ Read an ablation in this order:
 5. **Task breakdown** — a section can help one task family and hurt another.
 
 Absence of evidence is not evidence of absence: "no clear effect" after three attempts means untested. Sections can also interact—two rules that duplicate each other each look useless alone. Ablation reports include section headings, which come from your instruction file, but never section bodies.
+
+## Aggregate reports
+
+An aggregate pools several experiment reports of the same experiment. Open the committed [aggregate example](../examples/aggregate/output/report.html) or its [JSON](../examples/aggregate/output/report.json).
+
+Its top-level keys are `schemaVersion`, `kind`, `version`, `aggregateId`, `generatedAt`, `project`, `commit`, `instructionFile`, `tasks`, `sources`, `variants`, `treatment`, `comparison`, `taskResults`, `heterogeneity`, `warnings`, and `artifacts`.
+
+- `variants`, `comparison`, and `taskResults` have the experiment-report shape and describe the pooled evidence. A pooled arm's `agent` is the shared agent, or `mixed` when runs used different ones; `agents` lists them all.
+- `variants[].trials` are compact: outcome, score, duration, files, diff, usage, the `source` run, and `sourceAttempt`. `attempt` is renumbered so pairs never cross runs. Diagnostics stay in the source reports.
+- `sources[]` analyzes each run on its own: its report path, run ID, date, version, commit, configuration digest, order and seed, agents, summaries, comparison, per-task pass rates, and its own warnings.
+- `heterogeneity` counts which variant each run favoured, gives the range of per-run success differences, and says in one sentence whether the runs agree.
+
+Read an aggregate in this order:
+
+1. **Warnings** — every difference between runs that might make them incomparable, and any disagreement between runs.
+2. **Source runs** — a pooled verdict that only one run supports is fragile; one that every run supports is not.
+3. **Pooled verdict and evidence** — the exact test over all paired disagreements, with the usual labels.
+4. **Task breakdown** — as for a single run.
+
+Pooling assumes the runs are exchangeable: same instructions, same agent, comparable conditions. The warnings tell you where that assumption is in doubt; they cannot tell you that it holds.
 
 ## Regenerating the HTML
 

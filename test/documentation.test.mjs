@@ -69,3 +69,38 @@ test('committed ablation report finds the one section that matters and regenerat
   assert.equal(json.includes('/Users/'), false);
   assert.equal(html, renderReport(report));
 });
+
+test('committed aggregate pools two calculator runs into convincing evidence without hiding either run', async () => {
+  const report = JSON.parse(await readFile(path.join(repository, 'examples/aggregate/output/report.json'), 'utf8'));
+  assert.equal(report.kind, 'aggregate');
+  assert.deepEqual(report.sources.map((source) => [source.runId, source.report, source.comparison.signal]), [
+    ['calculator-demo-run-1', 'examples/aggregate/runs/first/report.json', 'early'],
+    ['calculator-demo-run-2', 'examples/aggregate/runs/second/report.json', 'early'],
+  ]);
+  assert.equal(report.comparison.paired.pairs, 6);
+  assert.equal(report.comparison.signal, 'convincing');
+  assert.equal(report.heterogeneity.disagreement, false);
+  assert.deepEqual(report.warnings, []);
+  for (const source of report.sources) {
+    const original = JSON.parse(await readFile(path.join(repository, source.report), 'utf8'));
+    assert.equal(original.runId, source.runId, 'each source report is committed beside the aggregate');
+  }
+});
+
+test('every committed example report is portable and its HTML regenerates byte for byte', async () => {
+  const reports = [];
+  const walk = async (directory) => {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) await walk(target);
+      else if (entry.name === 'report.json') reports.push(target);
+    }
+  };
+  await walk(path.join(repository, 'examples'));
+  assert.equal(reports.length, 5);
+  for (const file of reports) {
+    const json = await readFile(file, 'utf8');
+    assert.equal(json.includes('/Users/') || json.includes('.contexttest/worktrees'), false, `${file} is not portable`);
+    assert.equal(await readFile(path.join(path.dirname(file), 'report.html'), 'utf8'), renderReport(JSON.parse(json)), `${file} does not regenerate`);
+  }
+});

@@ -76,7 +76,7 @@ export function analyzeExperiment({ variants, tasks, taskRefs = {}, provider }) 
   return { variants: summarized, comparison: compare(allTrials).comparison, taskResults };
 }
 
-async function ensureSafeStateDirectory(target, repository) {
+export async function ensureSafeStateDirectory(target, repository) {
   try {
     const details = await lstat(target);
     if (details.isSymbolicLink()) throw new Error(`Refusing symlinked ContextTest state directory: ${target}`);

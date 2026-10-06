@@ -61,7 +61,7 @@ The bridge step exists because agents load different files on their own. Claude 
 
 | Component | Responsibility | Important boundary |
 |---|---|---|
-| `src/cli.mjs` | `init`, `doctor`, `run`, `ablate`, and `report` commands | Converts user input into validated engine calls and stable exit codes; refuses value flags without values |
+| `src/cli.mjs` | `init`, `doctor`, `run`, `ablate`, `aggregate`, and `report` commands | Converts user input into validated engine calls and stable exit codes; refuses value flags without values |
 | `src/lib/config.mjs` | Discovery, starter config, structural and safety validation, per-variant agent resolution | Rejects malformed or unsafe experiments—including unknown variant keys—before paid agent runs |
 | `src/lib/engine.mjs` | Run preparation, scheduling, worktree lifecycle, pairing, artifact assembly | Alternates arm order by attempt, optionally shuffles blocks by seed, and invalidates infrastructure failures |
 | `src/lib/sections.mjs` | Splitting an instruction file at one heading level; removing exactly one section | Pure text functions; byte-exact reconstruction |
@@ -70,6 +70,7 @@ The bridge step exists because agents load different files on their own. Claude 
 | `src/lib/adapters.mjs` | Codex, Claude Code, custom-command, and mock execution; which instruction files each agent reads; runs that never started | Spawns argument arrays directly; no shell interpolation |
 | `src/lib/assertions.mjs` | Executable, filesystem, path, diff, and output checks | A task passes only when the agent and every assertion pass |
 | `src/lib/stats.mjs` | Summaries, Wilson intervals, paired exact test, treatment-delivery check, verdict | Exposes uncertainty instead of collapsing evidence into one opaque score; withholds confident labels when the treatment may not have arrived |
+| `src/lib/aggregate.mjs` | Compatibility checks, pooled paired analysis, per-run breakdown, heterogeneity | Refuses mismatched variants, tasks, or repeated runs; never writes over a source report |
 | `src/lib/reporter.mjs` | Terminal, standalone HTML, and report regeneration for every report kind | Escapes embedded data; refuses unknown kinds and newer schema versions; reports remain portable files |
 | `src/action.mjs` | GitHub Action input/output adapter | Writes escaped multiline outputs and copies artifacts to the requested directory |
 
@@ -138,6 +139,10 @@ flowchart LR
 
 Within a task and attempt, all arms run back to back; their order reverses on even attempts so every pair of arms is balanced. The full arm runs once per task and attempt and serves every comparison.
 
+## Aggregation
+
+`contexttest aggregate` reads finished experiment reports; it never runs an agent. After checking that every source compares the same variant names in the same order over the same task set, it renumbers attempts per source so pairing by task and attempt can never join trials from different runs, then calls the same `analyzeExperiment` function the engine uses. Each source is analyzed separately as well, which yields the per-run breakdown and the heterogeneity summary. Differences that might make runs incomparable—configuration, agents, instruction digests, refs, versions—become recorded warnings rather than refusals.
+
 ## Extension surfaces
 
 You can extend ContextTest without forking the runner:
@@ -146,7 +151,8 @@ You can extend ContextTest without forking the runner:
 - add task-specific assertions to encode a repository's definition of mergeable;
 - consume `report.json` from dashboards or CI policy;
 - import the public Node API from `@erickdronski/contexttest` for custom orchestration;
-- regenerate HTML from any stored JSON report—experiment or ablation—with `contexttest report`.
+- regenerate HTML from any stored JSON report—experiment, ablation, or aggregate—with `contexttest report`;
+- pool reports from several days or commits with `contexttest aggregate`.
 
 The public API exports configuration helpers, the experiment and ablation runners, the section splitter, the reporters, and the paired-statistics functions. The configuration schema is published at [`schema/contexttest.schema.json`](../schema/contexttest.schema.json).
 
@@ -159,6 +165,7 @@ contexttest/
 ├── test/                      unit, integration, security, and documentation tests
 ├── examples/calculator/       deterministic zero-token demonstration
 ├── examples/ablation/         deterministic section-ablation demonstration
+├── examples/aggregate/        two committed runs pooled into one aggregate
 ├── docs/                      architecture, use cases, reports, and experiment playbook
 ├── scripts/                   lint, package smoke, and example-output tooling
 ├── action.yml                 GitHub Action contract

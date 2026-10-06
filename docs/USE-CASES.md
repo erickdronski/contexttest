@@ -15,6 +15,7 @@ ContextTest is useful when a repository-instruction change creates a falsifiable
 | Does Codex respond differently from Claude Code? | same instructions in both variants, a per-variant `agent` override | identical task set and refs | task success, duration, tokens, and cost per agent; the report states that only the agent differed |
 | Does a newer model need the same guidance? | same instructions, variants that differ only by `agent.model` | tasks the guidance was written for | paired success and adherence per model |
 | Do two agents need different guidance? | the same instruction comparison, once per agent | identical task set and refs | compare the per-agent reports; a variant pair that changes both agent and instructions cannot separate the two |
+| Does the result hold up over time? | the same experiment rerun on later days or commits | the same task set | `contexttest aggregate` pooled evidence plus each run's own result and a heterogeneity summary |
 | Does a shorter file perform as well? | current instructions versus compressed candidate | representative repository tasks | non-inferior success with lower tokens or latency |
 
 ## Strong first experiments
@@ -55,7 +56,7 @@ Do not use ContextTest as a leaderboard built from unrelated tasks, as a one-run
 1. Run the deterministic [calculator demonstration](../examples/calculator/README.md) to understand the artifact flow without spending model tokens.
 2. Replay one historical bug with one attempt per variant to debug your harness.
 3. Expand to three to ten representative tasks and at least five paired attempts.
-4. Repeat material conclusions on another commit or day.
+4. Repeat material conclusions on another commit or day, and pool the reports with `contexttest aggregate`.
 5. Add the GitHub Action only after the local experiment is stable and affordable.
 6. Treat a baseline win as a regression gate; treat a candidate win as evidence to review, not an automatic policy change.
 

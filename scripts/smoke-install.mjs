@@ -60,6 +60,11 @@ try {
   const readings = ablation.effects.map((effect) => `${effect.section.title}:${effect.reading}`).join(', ');
   if (readings !== 'Change:helps, Tone:no clear effect') throw new Error(`Unexpected ablation readings: ${readings}`);
   await run(bin, ['report', ablation.artifacts.json]);
+
+  const second = JSON.parse((await run(bin, ['run', '--json', '--seed', '3'])).stdout.trim());
+  const pooled = JSON.parse((await run(bin, ['aggregate', report.artifacts.json, second.artifacts.json, '--json'])).stdout.trim());
+  if (pooled.kind !== 'aggregate' || pooled.comparison.paired.pairs !== 2) throw new Error(`Unexpected aggregate: ${pooled.kind} with ${pooled.comparison.paired.pairs} pairs`);
+  await run(bin, ['report', pooled.artifacts.json]);
   process.stdout.write(`Clean-install smoke passed for ContextTest ${version}.\n`);
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

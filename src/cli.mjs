@@ -6,7 +6,8 @@ import { runExperiment } from './lib/engine.mjs';
 import { deliveryFor, deliveryWarning, ISOLATION_FLAGS } from './lib/adapters.mjs';
 import { assertGitRepository, currentCommit, pathExistsAtRef } from './lib/git.mjs';
 import { planAblation, runAblation } from './lib/ablation.mjs';
-import { renderAblationPlan, renderAblationTerminal, renderReport, renderTerminalReport, reportKind } from './lib/reporter.mjs';
+import { aggregateReports, loadReports, writeAggregate } from './lib/aggregate.mjs';
+import { renderAblationPlan, renderAblationTerminal, renderAggregateTerminal, renderReport, renderTerminalReport, reportKind } from './lib/reporter.mjs';
 import { exists, findExecutable, isPathInside, parseArgs, runProcess, stableStringify, VERSION, writeJson } from './lib/utils.mjs';
 
 const HELP = `
@@ -19,6 +20,7 @@ Usage
   contexttest ablate [--config path] [--variant name] [--level 2]
                      [--sections "A,B"] [--task name] [--attempts n] [--seed n]
                      [--dry-run] [--keep-worktrees] [--report-dir path] [--json]
+  contexttest aggregate <report.json> <report.json>... [--out dir] [--json]
   contexttest doctor [--config path]
   contexttest report <report.json> [--output report.html]
   contexttest --version
@@ -29,6 +31,7 @@ Examples
   contexttest run --task focused-change --json
   contexttest ablate --dry-run
   contexttest ablate --sections "Testing,Style" --attempts 5
+  contexttest aggregate runs/*/report.json --out pooled
 `;
 
 function log(message = '') { process.stdout.write(`${message}\n`); }
@@ -120,6 +123,14 @@ async function ablate(flags) {
   log(flags.json ? JSON.stringify(report) : renderAblationTerminal(report));
 }
 
+async function aggregate(positional, flags) {
+  const inputs = await loadReports(positional.slice(1));
+  const report = aggregateReports(inputs);
+  await writeAggregate({ report, inputs, out: valueFlag(flags, 'out') });
+  log(flags.json ? JSON.stringify(report) : renderAggregateTerminal(report));
+  if (report.comparison.winner === 'baseline') process.exitCode = 2;
+}
+
 async function doctor(flags) {
   const checks = [];
   const checkExecutable = async (name) => {
@@ -203,6 +214,7 @@ async function main() {
   if (command === 'init') return init(flags);
   if (command === 'run') return run(flags);
   if (command === 'ablate') return ablate(flags);
+  if (command === 'aggregate') return aggregate(positional, flags);
   if (command === 'doctor') return doctor(flags);
   if (command === 'report') return reportCommand(positional, flags);
   throw new Error(`Unknown command: ${command}\n\n${HELP.trim()}`);

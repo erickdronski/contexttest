@@ -95,3 +95,22 @@ test('report regenerates HTML for old and new report kinds and refuses unknown o
   assert.equal(future.code, 1);
   assert.match(future.stderr, /schemaVersion 9/);
 });
+
+test('aggregate pools committed runs, writes both artifacts, and explains refusals', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'contexttest-cli-aggregate-'));
+  const runs = ['first', 'second'].map((name) => fileURLToPath(new URL(`../examples/aggregate/runs/${name}/report.json`, import.meta.url)));
+  const pooled = await contexttest(directory, 'aggregate', ...runs, '--out', 'pooled', '--json');
+  assert.equal(pooled.code, 0, pooled.stderr);
+  const report = JSON.parse(pooled.stdout.trim());
+  assert.deepEqual([report.kind, report.comparison.paired.pairs, report.comparison.signal], ['aggregate', 6, 'convincing']);
+  assert.match(await readFile(path.join(directory, 'pooled', 'report.html'), 'utf8'), /More runs, <em>same<\/em> question/);
+  const terminal = await contexttest(directory, 'aggregate', ...runs, '--out', 'again');
+  assert.match(terminal.stdout, /SOURCE RUNS[\s\S]*calculator-demo-run-2/);
+  const twice = await contexttest(directory, 'aggregate', runs[0], runs[0], '--out', 'twice');
+  assert.equal(twice.code, 1);
+  assert.match(twice.stderr, /appears more than once/);
+  const ablation = fileURLToPath(new URL('../examples/ablation/output/report.json', import.meta.url));
+  const mixed = await contexttest(directory, 'aggregate', runs[0], ablation, '--out', 'mixed');
+  assert.equal(mixed.code, 1);
+  assert.match(mixed.stderr, /is an ablation report/);
+});

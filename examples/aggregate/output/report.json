@@ -1,0 +1,680 @@
+{
+  "schemaVersion": 1,
+  "kind": "aggregate",
+  "version": "0.2.0",
+  "aggregateId": "calculator-aggregate-example",
+  "generatedAt": "2026-07-24T00:00:00.000Z",
+  "project": "calculator-demo",
+  "commit": "0000000000000000000000000000000000000000",
+  "instructionFile": "AGENTS.md",
+  "tasks": [
+    "safe-division"
+  ],
+  "sources": [
+    {
+      "runId": "calculator-demo-run-1",
+      "report": "examples/aggregate/runs/first/report.json",
+      "generatedAt": "2026-07-24T00:00:00.000Z",
+      "version": "0.2.0",
+      "project": "calculator-demo",
+      "commit": "0000000000000000000000000000000000000000",
+      "configDigest": "78658624f0de9bda2546d2668d85e6d1d6c3f96f5434fc3d81f5c30657e34918",
+      "order": "sequential",
+      "seed": null,
+      "agents": [
+        "mock",
+        "mock"
+      ],
+      "variants": [
+        {
+          "name": "without-instructions",
+          "summary": {
+            "attempts": 3,
+            "successes": 0,
+            "passRate": 0,
+            "passRateInterval": [
+              0,
+              0.5615060804490177
+            ],
+            "medianDurationMs": 314,
+            "medianCostUsd": null,
+            "medianDiffLines": 4,
+            "medianChangedFiles": 1,
+            "meanAssertionScore": 0.8000000000000002,
+            "medianInputTokens": 0,
+            "medianOutputTokens": 0
+          }
+        },
+        {
+          "name": "with-instructions",
+          "summary": {
+            "attempts": 3,
+            "successes": 3,
+            "passRate": 1,
+            "passRateInterval": [
+              0.43849391955098227,
+              1
+            ],
+            "medianDurationMs": 294,
+            "medianCostUsd": null,
+            "medianDiffLines": 4,
+            "medianChangedFiles": 1,
+            "meanAssertionScore": 1,
+            "medianInputTokens": 0,
+            "medianOutputTokens": 0
+          }
+        }
+      ],
+      "comparison": {
+        "winner": "candidate",
+        "basis": "success",
+        "reason": "100 percentage-point difference in task success.",
+        "passRateDelta": 1,
+        "assertionScoreDelta": 0.19999999999999984,
+        "signal": "early",
+        "minimumAttempts": 3,
+        "paired": {
+          "pairs": 3,
+          "leftWins": 0,
+          "rightWins": 3,
+          "bothPass": 0,
+          "bothFail": 0,
+          "discordant": 3,
+          "pValue": 0.25000000000000006
+        },
+        "pValue": 0.25000000000000006,
+        "statisticallySignificant": false,
+        "treatmentDelivery": "unknown",
+        "deliveryCheck": {
+          "status": "unknown",
+          "reason": "The agent did not report token usage."
+        }
+      },
+      "taskResults": [
+        {
+          "name": "safe-division",
+          "passRates": [
+            0,
+            1
+          ],
+          "winner": "candidate",
+          "pValue": 0.25000000000000006
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "runId": "calculator-demo-run-2",
+      "report": "examples/aggregate/runs/second/report.json",
+      "generatedAt": "2026-07-24T00:00:00.000Z",
+      "version": "0.2.0",
+      "project": "calculator-demo",
+      "commit": "0000000000000000000000000000000000000000",
+      "configDigest": "78658624f0de9bda2546d2668d85e6d1d6c3f96f5434fc3d81f5c30657e34918",
+      "order": "sequential",
+      "seed": null,
+      "agents": [
+        "mock",
+        "mock"
+      ],
+      "variants": [
+        {
+          "name": "without-instructions",
+          "summary": {
+            "attempts": 3,
+            "successes": 0,
+            "passRate": 0,
+            "passRateInterval": [
+              0,
+              0.5615060804490177
+            ],
+            "medianDurationMs": 314,
+            "medianCostUsd": null,
+            "medianDiffLines": 4,
+            "medianChangedFiles": 1,
+            "meanAssertionScore": 0.8000000000000002,
+            "medianInputTokens": 0,
+            "medianOutputTokens": 0
+          }
+        },
+        {
+          "name": "with-instructions",
+          "summary": {
+            "attempts": 3,
+            "successes": 3,
+            "passRate": 1,
+            "passRateInterval": [
+              0.43849391955098227,
+              1
+            ],
+            "medianDurationMs": 294,
+            "medianCostUsd": null,
+            "medianDiffLines": 4,
+            "medianChangedFiles": 1,
+            "meanAssertionScore": 1,
+            "medianInputTokens": 0,
+            "medianOutputTokens": 0
+          }
+        }
+      ],
+      "comparison": {
+        "winner": "candidate",
+        "basis": "success",
+        "reason": "100 percentage-point difference in task success.",
+        "passRateDelta": 1,
+        "assertionScoreDelta": 0.19999999999999984,
+        "signal": "early",
+        "minimumAttempts": 3,
+        "paired": {
+          "pairs": 3,
+          "leftWins": 0,
+          "rightWins": 3,
+          "bothPass": 0,
+          "bothFail": 0,
+          "discordant": 3,
+          "pValue": 0.25000000000000006
+        },
+        "pValue": 0.25000000000000006,
+        "statisticallySignificant": false,
+        "treatmentDelivery": "unknown",
+        "deliveryCheck": {
+          "status": "unknown",
+          "reason": "The agent did not report token usage."
+        }
+      },
+      "taskResults": [
+        {
+          "name": "safe-division",
+          "passRates": [
+            0,
+            1
+          ],
+          "winner": "candidate",
+          "pValue": 0.25000000000000006
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "variants": [
+    {
+      "name": "without-instructions",
+      "agent": {
+        "provider": "mock",
+        "model": null,
+        "isolate": false,
+        "digest": "90890dd2a12129e8"
+      },
+      "agents": [
+        "mock"
+      ],
+      "instructions": {
+        "mode": "disabled",
+        "bytes": 0,
+        "digest": null
+      },
+      "trials": [
+        {
+          "source": "calculator-demo-run-1",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 1,
+          "sourceAttempt": 1,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 312,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-1",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 2,
+          "sourceAttempt": 2,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 314,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-1",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 3,
+          "sourceAttempt": 3,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 316,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-2",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 4,
+          "sourceAttempt": 1,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 312,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-2",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 5,
+          "sourceAttempt": 2,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 314,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-2",
+          "task": "safe-division",
+          "variant": "without-instructions",
+          "attempt": 6,
+          "sourceAttempt": 3,
+          "passed": false,
+          "score": 0.8,
+          "durationMs": 316,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 1,
+            "deletions": 3,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        }
+      ],
+      "summary": {
+        "attempts": 6,
+        "successes": 0,
+        "passRate": 0,
+        "passRateInterval": [
+          0,
+          0.3903430336530645
+        ],
+        "medianDurationMs": 314,
+        "medianCostUsd": null,
+        "medianDiffLines": 4,
+        "medianChangedFiles": 1,
+        "meanAssertionScore": 0.7999999999999999,
+        "medianInputTokens": 0,
+        "medianOutputTokens": 0
+      }
+    },
+    {
+      "name": "with-instructions",
+      "agent": {
+        "provider": "mock",
+        "model": null,
+        "isolate": false,
+        "digest": "90890dd2a12129e8"
+      },
+      "agents": [
+        "mock"
+      ],
+      "instructions": {
+        "mode": "source",
+        "source": "AGENTS.candidate.md",
+        "bytes": 250,
+        "digest": "1d682c8d5cbe7d2f059577e31a726c6c18868ff061ee678e26ec12d76de2c7b3"
+      },
+      "trials": [
+        {
+          "source": "calculator-demo-run-1",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 1,
+          "sourceAttempt": 1,
+          "passed": true,
+          "score": 1,
+          "durationMs": 292,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-1",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 2,
+          "sourceAttempt": 2,
+          "passed": true,
+          "score": 1,
+          "durationMs": 294,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-1",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 3,
+          "sourceAttempt": 3,
+          "passed": true,
+          "score": 1,
+          "durationMs": 296,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-2",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 4,
+          "sourceAttempt": 1,
+          "passed": true,
+          "score": 1,
+          "durationMs": 292,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-2",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 5,
+          "sourceAttempt": 2,
+          "passed": true,
+          "score": 1,
+          "durationMs": 294,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        },
+        {
+          "source": "calculator-demo-run-2",
+          "task": "safe-division",
+          "variant": "with-instructions",
+          "attempt": 6,
+          "sourceAttempt": 3,
+          "passed": true,
+          "score": 1,
+          "durationMs": 296,
+          "files": [
+            "examples/calculator/fixture/calculator.mjs"
+          ],
+          "diff": {
+            "additions": 4,
+            "deletions": 0,
+            "total": 4
+          },
+          "usage": {
+            "inputTokens": 0,
+            "cachedInputTokens": 0,
+            "outputTokens": 0,
+            "costUsd": null
+          }
+        }
+      ],
+      "summary": {
+        "attempts": 6,
+        "successes": 6,
+        "passRate": 1,
+        "passRateInterval": [
+          0.6096569663469354,
+          0.9999999999999999
+        ],
+        "medianDurationMs": 294,
+        "medianCostUsd": null,
+        "medianDiffLines": 4,
+        "medianChangedFiles": 1,
+        "meanAssertionScore": 1,
+        "medianInputTokens": 0,
+        "medianOutputTokens": 0
+      }
+    }
+  ],
+  "treatment": {
+    "differs": [
+      "instructions"
+    ],
+    "agentSettings": [],
+    "summary": "Only the instructions differ; both arms use mock."
+  },
+  "comparison": {
+    "winner": "candidate",
+    "basis": "success",
+    "reason": "100 percentage-point difference in task success.",
+    "passRateDelta": 1,
+    "assertionScoreDelta": 0.20000000000000007,
+    "signal": "convincing",
+    "minimumAttempts": 6,
+    "paired": {
+      "pairs": 6,
+      "leftWins": 0,
+      "rightWins": 6,
+      "bothPass": 0,
+      "bothFail": 0,
+      "discordant": 6,
+      "pValue": 0.031250000000000014
+    },
+    "pValue": 0.031250000000000014,
+    "statisticallySignificant": true,
+    "treatmentDelivery": "unknown",
+    "deliveryCheck": {
+      "status": "unknown",
+      "reason": "The agent did not report token usage."
+    }
+  },
+  "taskResults": [
+    {
+      "name": "safe-division",
+      "variants": [
+        {
+          "name": "without-instructions",
+          "summary": {
+            "attempts": 6,
+            "successes": 0,
+            "passRate": 0,
+            "passRateInterval": [
+              0,
+              0.3903430336530645
+            ],
+            "medianDurationMs": 314,
+            "medianCostUsd": null,
+            "medianDiffLines": 4,
+            "medianChangedFiles": 1,
+            "meanAssertionScore": 0.7999999999999999,
+            "medianInputTokens": 0,
+            "medianOutputTokens": 0
+          }
+        },
+        {
+          "name": "with-instructions",
+          "summary": {
+            "attempts": 6,
+            "successes": 6,
+            "passRate": 1,
+            "passRateInterval": [
+              0.6096569663469354,
+              0.9999999999999999
+            ],
+            "medianDurationMs": 294,
+            "medianCostUsd": null,
+            "medianDiffLines": 4,
+            "medianChangedFiles": 1,
+            "meanAssertionScore": 1,
+            "medianInputTokens": 0,
+            "medianOutputTokens": 0
+          }
+        }
+      ],
+      "comparison": {
+        "winner": "candidate",
+        "basis": "success",
+        "reason": "100 percentage-point difference in task success.",
+        "passRateDelta": 1,
+        "assertionScoreDelta": 0.20000000000000007,
+        "signal": "convincing",
+        "minimumAttempts": 6,
+        "paired": {
+          "pairs": 6,
+          "leftWins": 0,
+          "rightWins": 6,
+          "bothPass": 0,
+          "bothFail": 0,
+          "discordant": 6,
+          "pValue": 0.031250000000000014
+        },
+        "pValue": 0.031250000000000014,
+        "statisticallySignificant": true,
+        "treatmentDelivery": "unknown",
+        "deliveryCheck": {
+          "status": "unknown",
+          "reason": "The agent did not report token usage."
+        }
+      }
+    }
+  ],
+  "heterogeneity": {
+    "leaders": {
+      "candidate": 2,
+      "baseline": 0,
+      "tie": 0
+    },
+    "disagreement": false,
+    "passRateDeltaRange": [
+      1,
+      1
+    ],
+    "summary": "No run contradicts another: 2 favour with-instructions."
+  },
+  "warnings": [],
+  "artifacts": {
+    "json": "examples/aggregate/output/report.json",
+    "html": "examples/aggregate/output/report.html"
+  }
+}

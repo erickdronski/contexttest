@@ -14,13 +14,14 @@ ContextTest evaluates other systems, so its own evidence path must be inspectabl
 | end-to-end engine | [`test/integration.test.mjs`](../test/integration.test.mjs) | real temporary repository, paired worktrees, setup baseline, assertions, artifacts, cleanup, cross-agent comparisons and their treatment wording, seeded schedules that never split a pair |
 | section splitting | [`test/sections.test.mjs`](../test/sections.test.mjs) | heading levels, preambles, nested and fenced headings, CRLF, byte-exact removal, selection by title or number, ambiguity |
 | ablation | [`test/ablation.test.mjs`](../test/ablation.test.mjs) | one shared full arm, per-section effects, Holm adjustment, alternated arm order, worktree cleanup, refusals before any run, symlinked sources, invalidation, no verdicts from duration alone |
+| aggregation | [`test/aggregate.test.mjs`](../test/aggregate.test.mjs) | pooled paired statistics, pairs that never cross runs, visible disagreement between runs, refusal of mismatched or repeated runs, warnings for every incomparability, 0.2.0 sources, no overwritten sources, guarded default directory |
 | treatment delivery | [`test/delivery.test.mjs`](../test/delivery.test.mjs) | a fake Claude Code that reads only `CLAUDE.md` receives `AGENTS.md` through the bridge in every arm; the bridge is excluded from metrics; existing `CLAUDE.md` rules are kept; unrecognized models and missing executables invalidate the experiment; `doctor` warns |
 | reporters | [`test/reporter.test.mjs`](../test/reporter.test.mjs) | standalone escaped HTML, terminal verdict, multi-ref task handling, a preserved 0.2.0 report, refusal of unknown kinds and newer schema versions |
 | statistics | [`test/stats.test.mjs`](../test/stats.test.mjs) | medians, Wilson intervals, paired exact p-values, pairing keys, verdict rules, evidence labels, and the treatment-delivery check against a measured failure |
 | process and secrets | [`test/utils.test.mjs`](../test/utils.test.mjs) | environment minimization, secret patterns, path containment, timeout truthfulness, a seeded generator pinned so recorded seeds keep reproducing |
-| command line | [`test/cli.test.mjs`](../test/cli.test.mjs) | overrides on configs without `trials`, recorded seeds, value flags that refuse to run without a value, `ablate --dry-run` budgets that create nothing, `report` for old and new kinds |
+| command line | [`test/cli.test.mjs`](../test/cli.test.mjs) | overrides on configs without `trials`, recorded seeds, value flags that refuse to run without a value, `ablate --dry-run` budgets that create nothing, `aggregate` artifacts and refusals, `report` for old and new kinds |
 | public documentation | [`test/documentation.test.mjs`](../test/documentation.test.mjs) | no broken local links, portable example data, JSON-to-HTML byte equality for every committed example |
-| installed package | [`scripts/smoke-install.mjs`](../scripts/smoke-install.mjs) | packed tarball installs in a clean consumer repository and completes an experiment and an ablation |
+| installed package | [`scripts/smoke-install.mjs`](../scripts/smoke-install.mjs) | packed tarball installs in a clean consumer repository and completes an experiment, an ablation, and an aggregate of two runs |
 | GitHub Action | [`.github/workflows/ci.yml`](https://github.com/erickdronski/contexttest/blob/main/.github/workflows/ci.yml) | Action entrypoint executes from the repository and emits report artifacts |
 
 ## Run the same gates locally
@@ -32,6 +33,7 @@ npm run test:coverage
 npm run smoke:install
 npm run demo
 npm run demo:ablate
+npm run demo:aggregate
 npm audit --audit-level=low
 ```
 
@@ -71,6 +73,8 @@ A future agent release could change which files it loads. The fake cannot detect
 The [calculator JSON](../examples/calculator/output/report.json) and [HTML](../examples/calculator/output/report.html) come from six trials. A test requires mock-provider labeling, the expected 0% versus 100% task outcome, three valid pairs, no local home or temporary worktree paths, and byte-for-byte equality between the checked-in HTML and the reporter's rendering of the JSON.
 
 The [ablation JSON](../examples/ablation/output/report.json) and [HTML](../examples/ablation/output/report.html) come from twelve trials. A test requires one shared full arm, the Public API section reading `helps` and the other two `no clear effect`, early evidence, no invented duration effect, portable paths, and byte-for-byte HTML regeneration.
+
+The [aggregate JSON](../examples/aggregate/output/report.json) and [HTML](../examples/aggregate/output/report.html) pool two further calculator runs whose complete reports are committed beside it. A test requires six pooled pairs, convincing pooled evidence from two early runs, no warnings, and that each source is present. A final test walks every committed `report.json` under `examples/` and requires portable paths and byte-for-byte HTML regeneration for all of them.
 
 ## Security verification
 

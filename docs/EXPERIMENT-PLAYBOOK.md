@@ -111,7 +111,15 @@ Once a full instruction file reliably beats no instructions, `contexttest ablate
 
 Start with `contexttest ablate --dry-run` to see the outline and budget: (sections + 1) × tasks × attempts runs. Choose tasks the sections govern—a testing section cannot show an effect on a documentation-only task. Delete a section only when its ablation reaches at least directional evidence of no harm across a representative task set, and remember that two sections which duplicate each other each look useless alone; ablate one, then re-run with it gone.
 
-## 9. Classify failures before changing instructions
+## 9. Grow the sample instead of rerunning it
+
+When a result is early or directional and the decision matters, run the same experiment again on another day—same config, same variants, same tasks—and pool the reports with `contexttest aggregate`. Replicating on a different day is also the cheapest defense against provider drift. Then read the source breakdown before the pooled verdict:
+
+- if every run points the same way, the pooled label is the honest summary;
+- if runs disagree, investigate what changed between them before trusting the pooled average;
+- if the aggregate warns about different configurations, agents, or instruction digests, decide deliberately whether those runs measured the same treatment. Pooling them answers a broader question than either run did.
+
+## 10. Classify failures before changing instructions
 
 | Failure | Meaning | Response |
 |---|---|---|
@@ -123,7 +131,7 @@ Start with `contexttest ablate --dry-run` to see the outline and budget: (sectio
 | impossible task at selected ref | neither variant has a fair path to success | redesign the task |
 | secret or private data in diagnostics | report is unsafe to share | rotate if necessary, redact source, rerun, inspect again |
 
-## 10. Use an experiment review checklist
+## 11. Use an experiment review checklist
 
 Before sharing or acting on a result, confirm:
 
@@ -136,10 +144,10 @@ Before sharing or acting on a result, confirm:
 - [ ] the report's task-level outcomes agree with the aggregate story;
 - [ ] the sample size and exact p-value support the strength of the claim;
 - [ ] diagnostics were inspected for sensitive source, paths, and agent output;
-- [ ] material conclusions were replicated;
+- [ ] material conclusions were replicated, and pooled runs agree with each other;
 - [ ] the decision and caveats are recorded with the report.
 
-## 11. Keep experiments reviewable
+## 12. Keep experiments reviewable
 
 Commit the config, candidate instruction file, and repository-owned verification scripts. Keep raw reports private by default because diagnostics may contain code or paths. Share a sanitized report only when its contents have been inspected.
 

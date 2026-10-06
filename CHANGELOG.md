@@ -25,6 +25,7 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - A deterministic ablation example with committed golden output, `npm run demo:ablate`, and a clean-install smoke step
 - Every report records `kind`; `contexttest report` renders experiment and ablation reports, including reports written before 0.3.0, and refuses unknown kinds or newer schema versions
 - Comparisons record the `basis` of their verdict: success, adherence, or duration
+- `contexttest aggregate`: pools compatible experiment reports into paired statistics per task and overall, keeps pairs inside their own run, analyzes every source run on its own, and summarizes disagreement between runs. It refuses mismatched variants, variant order, or task sets and repeated runs, and warns about and records differences in configuration, agents, instruction digests, task refs, project, or version. Terminal, JSON (`kind: "aggregate"`), and HTML output, a committed example, `npm run demo:aggregate`, and a clean-install smoke step
 - Seeded randomized task order: `trials.seed`, `--seed`, or the Action's `seed` input shuffles task and attempt blocks reproducibly; reports record `experiment.order` and `experiment.seed`
 
 ## [0.2.0] - 2026-07-24
