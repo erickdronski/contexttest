@@ -1,4 +1,58 @@
+import path from 'node:path';
 import { environmentSecrets, interpolate, redact, runProcess, safeEnvironment } from './utils.mjs';
+
+// Which instruction files each agent loads by itself. Anything else reaches the
+// agent only if the repository or prompt points at it, so ContextTest cannot
+// promise the treatment was delivered.
+const NATIVE_INSTRUCTION_FILES = {
+  codex: new Set(['AGENTS.md', 'AGENTS.override.md']),
+  claude: new Set(['CLAUDE.md', 'CLAUDE.local.md']),
+};
+export const CLAUDE_BRIDGE_IMPORT = '@AGENTS.md';
+
+export function deliveryFor(provider, instructionFile = 'AGENTS.md') {
+  const file = instructionFile.replaceAll('\\', '/');
+  const name = path.posix.basename(file);
+  if (!NATIVE_INSTRUCTION_FILES[provider]) return { file, method: 'unknown', bridgedVia: null };
+  if (NATIVE_INSTRUCTION_FILES[provider].has(name)) return { file, method: 'native', bridgedVia: null };
+  // Claude Code reads CLAUDE.md, not AGENTS.md. A sibling CLAUDE.md that imports
+  // AGENTS.md delivers the same text without rewriting the file under test.
+  if (provider === 'claude' && name === 'AGENTS.md') {
+    const bridge = path.posix.join(path.posix.dirname(file), 'CLAUDE.md');
+    return { file, method: 'bridged', bridgedVia: `${bridge} @import`, bridge };
+  }
+  return { file, method: 'unverified', bridgedVia: null };
+}
+
+const PROVIDER_NAMES = { codex: 'Codex', claude: 'Claude Code' };
+
+// Plain-language consequence of a delivery method, or null when nothing is at risk.
+export function deliveryWarning(provider, delivery) {
+  if (delivery.method !== 'unverified') return null;
+  const loader = provider === 'claude' ? 'CLAUDE.md' : 'AGENTS.md';
+  return `${PROVIDER_NAMES[provider] ?? provider} does not load ${delivery.file} by itself. Reference it from ${loader} or the task prompt, or the treatment may never reach the agent.`;
+}
+
+// Recognize runs where the agent never started, so they invalidate the
+// experiment instead of being scored as the agent failing the task.
+export function agentStartFailure(agent, result) {
+  if (result.spawnError) return `Could not start ${result.command}: ${result.spawnError}. Check that the agent executable is installed and on PATH.`;
+  if (agent.provider === 'claude') {
+    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+    const usage = result.usage ?? {};
+    const consumed = (usage.inputTokens ?? 0) + (usage.cachedInputTokens ?? 0) + (usage.outputTokens ?? 0);
+    if (output.includes('[claude-code:unrecognized_model]') && consumed === 0) {
+      return `Claude Code did not recognize model ${JSON.stringify(agent.model ?? 'default')}; the agent never ran. Check agent.model.`;
+    }
+    // A reported result with zero turns and zero tokens means Claude Code
+    // stopped before asking the model anything. A timeout is different: the
+    // agent was working, so it stays a scored outcome.
+    if (result.code !== 0 && !result.timedOut && usage.requests === 0 && consumed === 0) {
+      return `Claude Code exited with code ${result.code} before its first turn; the agent never ran.`;
+    }
+  }
+  return null;
+}
 
 export function parseCodexUsage(stdout) {
   const usage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null };
@@ -15,19 +69,25 @@ export function parseCodexUsage(stdout) {
   return usage;
 }
 
-export function parseClaudeUsage(stdout) {
-  try {
-    const data = JSON.parse(stdout);
-    const candidate = data.usage ?? {};
-    return {
-      inputTokens: candidate.input_tokens ?? 0,
-      cachedInputTokens: (candidate.cache_read_input_tokens ?? 0) + (candidate.cache_creation_input_tokens ?? 0),
-      outputTokens: candidate.output_tokens ?? 0,
-      costUsd: data.total_cost_usd ?? null,
-    };
-  } catch {
-    return { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null };
+function lastJsonObject(stdout) {
+  try { return JSON.parse(stdout); } catch { /* Diagnostics can precede the result object. */ }
+  for (const line of stdout.trim().split('\n').reverse()) {
+    try { const value = JSON.parse(line); if (value && typeof value === 'object') return value; } catch { /* Keep looking. */ }
   }
+  return null;
+}
+
+export function parseClaudeUsage(stdout) {
+  const data = lastJsonObject(stdout);
+  if (!data) return { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null, requests: null };
+  const candidate = data.usage ?? {};
+  return {
+    inputTokens: candidate.input_tokens ?? 0,
+    cachedInputTokens: (candidate.cache_read_input_tokens ?? 0) + (candidate.cache_creation_input_tokens ?? 0),
+    outputTokens: candidate.output_tokens ?? 0,
+    costUsd: data.total_cost_usd ?? null,
+    requests: Number.isInteger(data.num_turns) ? data.num_turns : null,
+  };
 }
 
 export function buildCommand(agent, prompt, cwd) {

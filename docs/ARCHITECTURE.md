@@ -41,6 +41,7 @@ sequenceDiagram
   Engine->>Git: resolve task ref to commit
   Engine->>Git: create detached worktree
   Engine->>Git: apply exactly one instruction variant
+  Engine->>Git: bridge it for agents that read another file
   Engine->>Engine: run setup commands
   Engine->>Git: snapshot post-setup baseline
   Engine->>Agent: same task prompt, isolated cwd, safe env
@@ -54,6 +55,8 @@ sequenceDiagram
 
 Setup happens before the trial baseline is recorded, so dependency installation or fixture generation is not attributed to the agent's changed-file and diff metrics.
 
+The bridge step exists because agents load different files on their own. Claude Code reads `CLAUDE.md`, not `AGENTS.md`, so for an `AGENTS.md` treatment every Claude Code arm—with or without instructions—gets the same `CLAUDE.md` import line. Like the instruction file itself, the bridge is part of the trial baseline, not of the agent's change. An agent that exits before its first turn, or an executable that cannot start, is an infrastructure failure: the experiment is invalidated instead of scoring a run that never happened.
+
 ## Components and responsibilities
 
 | Component | Responsibility | Important boundary |
@@ -61,8 +64,8 @@ Setup happens before the trial baseline is recorded, so dependency installation 
 | `src/cli.mjs` | `init`, `doctor`, `run`, and `report` commands | Converts user input into validated engine calls and stable exit codes |
 | `src/lib/config.mjs` | Discovery, starter config, structural and safety validation | Rejects malformed or unsafe experiments before paid agent runs |
 | `src/lib/engine.mjs` | Scheduling, worktree lifecycle, pairing, artifact assembly | Alternates variant order by attempt and invalidates infrastructure failures |
-| `src/lib/git.mjs` | Commit resolution, detached worktrees, variant application, diff metrics | Refuses unsafe deletion and path/symlink escapes |
-| `src/lib/adapters.mjs` | Codex, Claude Code, custom-command, and mock execution | Spawns argument arrays directly; no shell interpolation |
+| `src/lib/git.mjs` | Commit resolution, detached worktrees, variant application, delivery bridges, diff metrics | Refuses unsafe deletion and path/symlink escapes, including through an existing `CLAUDE.md` |
+| `src/lib/adapters.mjs` | Codex, Claude Code, custom-command, and mock execution; which instruction files each agent reads; runs that never started | Spawns argument arrays directly; no shell interpolation |
 | `src/lib/assertions.mjs` | Executable, filesystem, path, diff, and output checks | A task passes only when the agent and every assertion pass |
 | `src/lib/stats.mjs` | Summaries, Wilson intervals, paired exact test, verdict | Exposes uncertainty instead of collapsing evidence into one opaque score |
 | `src/lib/reporter.mjs` | Terminal, standalone HTML, and report regeneration | Escapes embedded data; reports remain portable files |
@@ -100,7 +103,7 @@ ContextTest reduces accidental exposure by default:
 - no permission-bypass flags in the default Codex or Claude Code adapters;
 - bounded process time and retained output;
 - token-pattern and configured-secret redaction before report persistence;
-- realpath and symlink checks around state, variants, assertions, and cleanup;
+- realpath and symlink checks around state, variants, delivery bridges, assertions, and cleanup;
 - infrastructure failures invalidate the experiment instead of becoming false agent failures.
 
 For untrusted code, prompts, models, or MCP servers, put the entire run inside a disposable VM or container. See [SECURITY.md](../SECURITY.md) for the operational threat model.

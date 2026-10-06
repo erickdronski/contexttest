@@ -45,6 +45,9 @@ The top table answers the quickest questions:
 | Median diff lines | added plus deleted text lines |
 | Median input tokens | provider-reported input usage when available |
 | Median cost | provider-reported or calculated cost when available; otherwise `—` |
+| Instruction delivery | how each arm's agent receives the instruction file: `native`, `via CLAUDE.md @import` (bridged for Claude Code), or `unverified`; omitted for `command` and `mock` agents |
+
+A warning panel above the table appears whenever ContextTest has a reason to doubt the result—for example an instruction file the agent does not load on its own. Read it before the numbers.
 
 The verdict prioritizes a material task-success difference, then assertion adherence, then duration only when success is equal. It is a practical comparison rule, not a claim of universal superiority.
 
@@ -84,7 +87,8 @@ Each trial records:
 - agent duration and exit state;
 - every assertion result;
 - changed paths and diff counts;
-- token/cost usage when the provider exposes it;
+- token/cost usage when the provider exposes it, including Claude Code's turn count;
+- for bridged Claude Code arms, how the bridge was applied (`created`, `appended`, `already-imported`, or `symlinked`);
 - bounded, redacted diagnostics for failures.
 
 The JSON also records resolved commits per task, configuration digest, runner version, runtime metadata, setup-command count, and the comparison data needed to reproduce the terminal verdict.

@@ -3,7 +3,8 @@ import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createStarterConfig, loadConfig } from './lib/config.mjs';
 import { runExperiment } from './lib/engine.mjs';
-import { assertGitRepository, currentCommit } from './lib/git.mjs';
+import { deliveryFor, deliveryWarning } from './lib/adapters.mjs';
+import { assertGitRepository, currentCommit, pathExistsAtRef } from './lib/git.mjs';
 import { renderHtmlReport, renderTerminalReport } from './lib/reporter.mjs';
 import { exists, findExecutable, isPathInside, parseArgs, runProcess, VERSION, writeJson } from './lib/utils.mjs';
 
@@ -89,6 +90,16 @@ async function doctor(flags) {
           const commit = await currentCommit(repository, task.ref ?? loaded.config.baseRef ?? 'HEAD');
           checks.push({ name: `ref:${task.name}`, pass: true, detail: commit.slice(0, 12) });
         } catch { checks.push({ name: `ref:${task.name}`, pass: false, detail: `cannot resolve ${task.ref ?? loaded.config.baseRef ?? 'HEAD'}` }); }
+      }
+    }
+    const delivery = deliveryFor(loaded.config.agent.provider, loaded.config.instructionFile ?? 'AGENTS.md');
+    if (delivery.method === 'native') checks.push({ name: 'delivery', pass: true, detail: `${delivery.file} is loaded natively by ${loaded.config.agent.provider}` });
+    if (delivery.method === 'unverified') checks.push({ name: 'delivery', pass: true, warn: true, detail: deliveryWarning(loaded.config.agent.provider, delivery) });
+    if (delivery.method === 'bridged') {
+      checks.push({ name: 'delivery', pass: true, warn: true, detail: `Claude Code does not read ${delivery.file}; every arm gets ${delivery.bridgedVia} so the treatment reaches it` });
+      const refs = [...new Set(loaded.config.tasks.map((task) => task.ref ?? loaded.config.baseRef ?? 'HEAD'))];
+      if (repository) for (const ref of refs) {
+        if (await pathExistsAtRef(repository, ref, delivery.bridge)) checks.push({ name: 'delivery', pass: true, warn: true, detail: `${ref} already has ${delivery.bridge}: its rules reach every arm, including the one without instructions, and ContextTest adds the import to it` });
       }
     }
     for (const variant of loaded.config.variants.filter((item) => item.source)) {

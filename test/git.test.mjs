@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rename, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rename, symlink, unlink, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import os from 'node:os';
 import path from 'node:path';
-import { applyVariant, changedFiles, createWorktree, diffStats, removeWorktree } from '../src/lib/git.mjs';
+import { applyDeliveryBridge, applyVariant, changedFiles, createWorktree, diffStats, removeWorktree } from '../src/lib/git.mjs';
 
 const exec = promisify(execFile);
 
@@ -66,4 +66,35 @@ test('parallel trials serialize Git worktree registry mutations', async () => {
   await Promise.all(destinations.map((destination) => removeWorktree({ repository: root, destination, worktreeRoot, env })));
   const listed = await exec('git', ['worktree', 'list', '--porcelain'], { cwd: root, env });
   assert.equal(listed.stdout.split('\n').filter((line) => line.startsWith('worktree ')).length, 1);
+});
+
+test('the Claude bridge imports AGENTS.md without overwriting existing rules', { skip: process.platform === 'win32' }, async () => {
+  const worktree = await mkdtemp(path.join(os.tmpdir(), 'contexttest-bridge-'));
+  const options = { worktree, bridge: 'CLAUDE.md', importLine: '@AGENTS.md', target: 'AGENTS.md' };
+  assert.equal(await applyDeliveryBridge(options), 'created');
+  assert.equal(await readFile(path.join(worktree, 'CLAUDE.md'), 'utf8'), '@AGENTS.md\n');
+  assert.equal(await applyDeliveryBridge(options), 'already-imported');
+  await writeFile(path.join(worktree, 'CLAUDE.md'), '# Team rules\n- Keep diffs small.');
+  assert.equal(await applyDeliveryBridge(options), 'appended');
+  assert.equal(await readFile(path.join(worktree, 'CLAUDE.md'), 'utf8'), '# Team rules\n- Keep diffs small.\n\n@AGENTS.md\n');
+  await writeFile(path.join(worktree, 'CLAUDE.md'), 'See @./AGENTS.md below\n@./AGENTS.md\n');
+  assert.equal(await applyDeliveryBridge(options), 'already-imported');
+  const nested = await applyDeliveryBridge({ ...options, bridge: 'packages/api/CLAUDE.md', target: 'packages/api/AGENTS.md' });
+  assert.equal(nested, 'created');
+  assert.equal(await readFile(path.join(worktree, 'packages/api/CLAUDE.md'), 'utf8'), '@AGENTS.md\n');
+});
+
+test('the Claude bridge accepts a CLAUDE.md link to AGENTS.md and refuses any other link', { skip: process.platform === 'win32' }, async () => {
+  const worktree = await mkdtemp(path.join(os.tmpdir(), 'contexttest-bridge-link-'));
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'contexttest-bridge-outside-'));
+  const options = { worktree, bridge: 'CLAUDE.md', importLine: '@AGENTS.md', target: 'AGENTS.md' };
+  await symlink('AGENTS.md', path.join(worktree, 'CLAUDE.md'));
+  assert.equal(await applyDeliveryBridge(options), 'symlinked');
+  await unlink(path.join(worktree, 'CLAUDE.md'));
+  await writeFile(path.join(outside, 'CLAUDE.md'), 'do not overwrite\n');
+  await symlink(path.join(outside, 'CLAUDE.md'), path.join(worktree, 'CLAUDE.md'));
+  await assert.rejects(() => applyDeliveryBridge(options), /Refusing to write an instruction bridge through symlinked CLAUDE\.md/);
+  assert.equal(await readFile(path.join(outside, 'CLAUDE.md'), 'utf8'), 'do not overwrite\n');
+  await symlink(outside, path.join(worktree, 'linked'));
+  await assert.rejects(() => applyDeliveryBridge({ ...options, bridge: 'linked/CLAUDE.md', target: 'linked/AGENTS.md' }), /traverses a symlink outside the worktree/);
 });

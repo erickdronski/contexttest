@@ -128,7 +128,7 @@ export async function runProcess(command, args = [], options = {}) {
     }, timeoutMs);
     child.on('error', (error) => {
       settled = true; clearTimeout(timer);
-      resolve({ command, args, code: 127, signal: null, stdout, stderr: `${stderr}${error.message}`, durationMs: Date.now() - started, timedOut });
+      resolve({ command, args, code: 127, signal: null, stdout, stderr: `${stderr}${error.message}`, durationMs: Date.now() - started, timedOut, spawnError: error.code ?? error.message });
     });
     child.on('close', (code, signal) => {
       settled = true; clearTimeout(timer);

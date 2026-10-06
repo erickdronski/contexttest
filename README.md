@@ -136,6 +136,20 @@ ContextTest writes two artifacts under `.contexttest/reports/<run>/`:
 
 No account, server, database, or telemetry is involved. Reports remain local, but failed-run diagnostics can contain source excerpts, paths, or agent output. Inspect them before sharing.
 
+## Make sure the agent actually reads your instructions
+
+An experiment means nothing if the treatment never reaches the agent—and agents do not all read the same file.
+
+| Agent | Loads on its own | With `instructionFile: "AGENTS.md"`, ContextTest… |
+|---|---|---|
+| Codex | `AGENTS.md` | writes the variant's file; Codex reads it natively |
+| Claude Code | `CLAUDE.md`—**not** `AGENTS.md` | also writes a `CLAUDE.md` containing `@AGENTS.md` into every arm, so Claude Code imports the file under test |
+| `command` | whatever your agent reads | writes the file; delivery is your agent's responsibility |
+
+Before 0.3.0, Claude Code experiments with the default `AGENTS.md` never delivered the treatment: both arms were identical and every difference was noise. The bridge is now written into every arm—including the arm without instructions, where its import has no target—so only the imported file differs. It is written before the trial baseline and never counts as an agent change. A repository that already has a `CLAUDE.md` keeps it in every arm and gains the import line; `contexttest doctor` warns about this, because those rules also reach your baseline.
+
+For any other file name ContextTest cannot know whether the agent reads it, and both `doctor` and the report say so. If Claude Code exits before its first turn—for example because it does not recognize the configured model—the experiment is invalid rather than scored as agent failures.
+
 ## A complete experiment
 
 ```json
@@ -265,7 +279,7 @@ ContextTest uses `codex exec --ephemeral --sandbox workspace-write --json`. It n
 }
 ```
 
-ContextTest uses non-interactive print mode. `acceptEdits` is the default; bypassing permissions requires an explicit configuration change and is strongly discouraged outside an external sandbox.
+ContextTest uses non-interactive print mode. `acceptEdits` is the default; bypassing permissions requires an explicit configuration change and is strongly discouraged outside an external sandbox. Claude Code reads `CLAUDE.md`, so an `AGENTS.md` treatment is delivered through a `CLAUDE.md` import; see [Make sure the agent actually reads your instructions](#make-sure-the-agent-actually-reads-your-instructions).
 
 ### Any command
 

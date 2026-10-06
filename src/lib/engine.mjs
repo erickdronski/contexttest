@@ -3,8 +3,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { evaluateAssertions } from './assertions.mjs';
-import { runAgent } from './adapters.mjs';
-import { applyVariant, assertGitRepository, createWorktree, currentCommit, removeWorktree, snapshotTrialBaseline } from './git.mjs';
+import { agentStartFailure, CLAUDE_BRIDGE_IMPORT, deliveryFor, deliveryWarning, runAgent } from './adapters.mjs';
+import { applyDeliveryBridge, applyVariant, assertGitRepository, createWorktree, currentCommit, removeWorktree, snapshotTrialBaseline } from './git.mjs';
 import { validateConfig } from './config.mjs';
 import { renderHtmlReport } from './reporter.mjs';
 import { compareVariants, pairTrials, summarizeTrials } from './stats.mjs';
@@ -73,6 +73,8 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
   if (!reportDir) await ensureSafeStateDirectory(reportBase, repository);
   await ensureDir(worktreeRoot); await ensureDir(artifactRoot);
   const attempts = config.trials?.attempts ?? 3;
+  const instructionFile = config.instructionFile ?? 'AGENTS.md';
+  const delivery = deliveryFor(config.agent.provider, instructionFile);
   const jobs = [];
   for (const task of tasks) {
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -89,11 +91,14 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
     try {
       await createWorktree({ repository, destination: worktree, ref: job.task.ref ?? config.baseRef ?? 'HEAD' });
       created = true;
-      await applyVariant({ root, worktree, instructionFile: config.instructionFile ?? 'AGENTS.md', variant: job.variant });
+      await applyVariant({ root, worktree, instructionFile, variant: job.variant });
+      const bridge = delivery.method === 'bridged' ? await applyDeliveryBridge({ worktree, bridge: delivery.bridge, importLine: CLAUDE_BRIDGE_IMPORT, target: instructionFile }) : null;
       await runSetupCommands(config, worktree);
       await snapshotTrialBaseline(worktree);
       const started = Date.now();
       const agentResult = await runAgent({ agent: config.agent, prompt: job.task.prompt, cwd: worktree, environment: config.environment, mock: job.task.mock });
+      const startFailure = agentStartFailure(config.agent, agentResult);
+      if (startFailure) throw new Error(startFailure);
       const evaluation = await evaluateAssertions({ assertions: job.task.assertions, worktree, agentResult, environment: config.environment });
       const trial = {
         id, task: job.task.name, variant: job.variant.name, attempt: job.attempt,
@@ -101,6 +106,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
         assertions: evaluation.results, files: evaluation.files, diff: evaluation.diff,
         usage: agentResult.usage, exitCode: agentResult.code, timedOut: agentResult.timedOut,
         stdout: agentResult.stdout.slice(-10_000), stderr: agentResult.stderr.slice(-10_000),
+        ...(bridge ? { bridge } : {}),
       };
       onEvent({ type: 'trial:complete', trial, index: jobIndex + 1, total: jobs.length });
       return trial;
@@ -120,7 +126,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
   }
   const variants = config.variants.map((variant) => {
     const trials = trialResults.filter((trial) => trial.variant === variant.name);
-    return { name: variant.name, trials, summary: summarizeTrials(trials) };
+    return { name: variant.name, delivery: { file: delivery.file, method: delivery.method, bridgedVia: delivery.bridgedVia }, trials, summary: summarizeTrials(trials) };
   });
   const paired = pairTrials(trialResults, variants[0].name, variants[1].name);
   const comparison = compareVariants(variants[0].summary, variants[1].summary, paired);
@@ -143,7 +149,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
     project: config.project,
     commit,
     taskRefs,
-    instructionFile: config.instructionFile ?? 'AGENTS.md',
+    instructionFile,
     agent: { provider: config.agent.provider, model: config.agent.model ?? null },
     experiment: {
       attemptsPerVariant: attempts,
@@ -156,6 +162,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
     taskResults,
     variants,
     comparison,
+    warnings: [deliveryWarning(config.agent.provider, delivery)].filter(Boolean).map((message) => ({ code: 'delivery', message })),
     artifacts: { json: jsonPath, html: htmlPath },
   };
   await writeJson(jsonPath, report);

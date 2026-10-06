@@ -95,6 +95,11 @@
   "variants": [
     {
       "name": "without-instructions",
+      "delivery": {
+        "file": "AGENTS.md",
+        "method": "unknown",
+        "bridgedVia": null
+      },
       "trials": [
         {
           "id": "safe-division-without-instructions-1",
@@ -317,6 +322,11 @@
     },
     {
       "name": "with-instructions",
+      "delivery": {
+        "file": "AGENTS.md",
+        "method": "unknown",
+        "bridgedVia": null
+      },
       "trials": [
         {
           "id": "safe-division-with-instructions-1",
@@ -557,6 +567,7 @@
     "pValue": 0.25000000000000006,
     "statisticallySignificant": false
   },
+  "warnings": [],
   "artifacts": {
     "json": "examples/calculator/output/report.json",
     "html": "examples/calculator/output/report.html"

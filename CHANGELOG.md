@@ -4,6 +4,17 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Fixed
+
+- Claude Code experiments with the default `instructionFile: "AGENTS.md"` never delivered the treatment, because Claude Code reads `CLAUDE.md`; both arms were identical. Every Claude Code arm now gets the same `CLAUDE.md` containing `@AGENTS.md`, recorded per variant as `delivery`, excluded from agent metrics, and refused when `CLAUDE.md` links outside the treatment
+- An unrecognized Claude model, a Claude Code exit before its first turn, or a missing agent executable now invalidates the experiment instead of being scored as agent failure
+- Claude Code usage is parsed even when diagnostics precede the JSON result, and its turn count is recorded
+
+### Added
+
+- `contexttest doctor` reports how each agent receives the instruction file and warns when a base-ref `CLAUDE.md` reaches every arm
+- A report warning panel for instruction files the agent does not load on its own
+
 ## [0.2.0] - 2026-07-24
 
 ### Added

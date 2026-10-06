@@ -1,4 +1,4 @@
-import { copyFile, lstat, mkdir, readFile, realpath, rm, unlink, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, readFile, readlink, realpath, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { exists, isPathInside, runProcess } from './utils.mjs';
 
@@ -65,6 +65,39 @@ export async function applyVariant({ root, worktree, instructionFile, variant })
     if (destinationDetails?.isSymbolicLink()) throw new Error(`Refusing symlinked instruction destination: ${instructionFile}`);
     await writeFile(destination, variant.content, 'utf8');
   }
+}
+
+// Write the same CLAUDE.md import into every arm so Claude Code reads the
+// instruction file under test. The arm without instructions gets the bridge
+// too: only the imported file differs between arms, never the bridge. It is
+// written before the trial baseline, so it never counts as an agent change.
+export async function applyDeliveryBridge({ worktree, bridge, importLine, target }) {
+  const destination = path.resolve(worktree, bridge);
+  const targetPath = path.resolve(worktree, target);
+  if (!isPathInside(worktree, destination)) throw new Error(`Instruction bridge escapes the worktree: ${bridge}`);
+  await mkdir(path.dirname(destination), { recursive: true });
+  const [realWorktree, realParent] = await Promise.all([realpath(worktree), realpath(path.dirname(destination))]);
+  if (!isPathInside(realWorktree, realParent)) throw new Error(`Instruction bridge traverses a symlink outside the worktree: ${bridge}`);
+  const details = await detailsOrNull(destination);
+  if (details?.isSymbolicLink()) {
+    // A repository that already links CLAUDE.md to AGENTS.md needs no bridge.
+    // Writing through any other link could modify files outside the treatment.
+    if (path.resolve(path.dirname(destination), await readlink(destination)) === targetPath) return 'symlinked';
+    throw new Error(`Refusing to write an instruction bridge through symlinked ${bridge}.`);
+  }
+  if (details && !details.isFile()) throw new Error(`Instruction bridge path is not a regular file: ${bridge}`);
+  if (!details) { await writeFile(destination, `${importLine}\n`, 'utf8'); return 'created'; }
+  const existing = await readFile(destination, 'utf8');
+  const imports = new Set([importLine, importLine.replace('@', '@./')]);
+  if (existing.split(/\r?\n/).some((line) => imports.has(line.trim()))) return 'already-imported';
+  const separator = !existing ? '' : existing.endsWith('\n') ? '\n' : '\n\n';
+  await writeFile(destination, `${existing}${separator}${importLine}\n`, 'utf8');
+  return 'appended';
+}
+
+export async function pathExistsAtRef(repository, ref, file) {
+  const result = await git(['cat-file', '-e', `${ref}:${file.replaceAll('\\', '/')}`], repository, { allowFailure: true });
+  return result.code === 0;
 }
 
 export async function snapshotTrialBaseline(worktree) {

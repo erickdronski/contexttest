@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { buildCommand, parseClaudeUsage, parseCodexUsage, runAgent } from '../src/lib/adapters.mjs';
+import { agentStartFailure, buildCommand, deliveryFor, deliveryWarning, parseClaudeUsage, parseCodexUsage, runAgent } from '../src/lib/adapters.mjs';
 
 test('builds the verified Codex CLI contract without bypass flags', () => {
   const invocation = buildCommand({ provider: 'codex', model: 'gpt-test', ignoreUserConfig: true }, 'do work', '/repo');
@@ -22,9 +22,10 @@ test('builds the documented Claude Code print-mode contract', () => {
 test('parses provider usage without trusting diagnostic lines', () => {
   const codex = parseCodexUsage('diagnostic\n{"usage":{"input_tokens":10,"cached_input_tokens":4,"output_tokens":2}}\n{"data":{"usage":{"inputTokens":15,"outputTokens":3}}}');
   assert.deepEqual(codex, { inputTokens: 15, cachedInputTokens: 4, outputTokens: 3, costUsd: null });
-  const claude = parseClaudeUsage(JSON.stringify({ total_cost_usd: 0.012, usage: { input_tokens: 20, cache_read_input_tokens: 5, cache_creation_input_tokens: 2, output_tokens: 7 } }));
-  assert.deepEqual(claude, { inputTokens: 20, cachedInputTokens: 7, outputTokens: 7, costUsd: 0.012 });
-  assert.deepEqual(parseClaudeUsage('not json'), { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null });
+  const claude = parseClaudeUsage(JSON.stringify({ total_cost_usd: 0.012, num_turns: 3, usage: { input_tokens: 20, cache_read_input_tokens: 5, cache_creation_input_tokens: 2, output_tokens: 7 } }));
+  assert.deepEqual(claude, { inputTokens: 20, cachedInputTokens: 7, outputTokens: 7, costUsd: 0.012, requests: 3 });
+  assert.deepEqual(parseClaudeUsage('not json'), { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null, requests: null });
+  assert.equal(parseClaudeUsage(`warning: diagnostic\n${JSON.stringify({ num_turns: 2, usage: { input_tokens: 9 } })}`).inputTokens, 9);
 });
 
 test('command adapter substitutes prompt and cwd as complete arguments', async () => {
@@ -48,4 +49,40 @@ test('mock adapter redacts secrets from captured output', async () => {
 
 test('mock adapter requires a command', async () => {
   await assert.rejects(() => runAgent({ agent: { provider: 'mock' }, prompt: 'x', cwd: process.cwd(), environment: {} }), /mock\.command/i);
+});
+
+test('knows which instruction files each provider loads by itself', () => {
+  assert.deepEqual(deliveryFor('codex', 'AGENTS.md'), { file: 'AGENTS.md', method: 'native', bridgedVia: null });
+  assert.deepEqual(deliveryFor('claude', 'CLAUDE.md'), { file: 'CLAUDE.md', method: 'native', bridgedVia: null });
+  assert.deepEqual(deliveryFor('claude', 'AGENTS.md'), { file: 'AGENTS.md', method: 'bridged', bridgedVia: 'CLAUDE.md @import', bridge: 'CLAUDE.md' });
+  assert.equal(deliveryFor('claude', 'packages/api/AGENTS.md').bridge, 'packages/api/CLAUDE.md');
+  assert.equal(deliveryFor('claude', 'docs/rules.md').method, 'unverified');
+  assert.equal(deliveryFor('codex', 'CLAUDE.md').method, 'unverified');
+  assert.equal(deliveryFor('mock', 'AGENTS.md').method, 'unknown');
+  assert.match(deliveryWarning('claude', deliveryFor('claude', 'docs/rules.md')), /Claude Code does not load docs\/rules\.md/);
+  assert.equal(deliveryWarning('claude', deliveryFor('claude', 'AGENTS.md')), null);
+});
+
+test('classifies an unrecognized Claude model as a run that never started', () => {
+  const stdout = `[claude-code:unrecognized_model]\n${JSON.stringify({ type: 'result', is_error: true, num_turns: 0, usage: { input_tokens: 0, output_tokens: 0 } })}`;
+  const result = { command: 'claude', code: 1, stdout, stderr: '', usage: parseClaudeUsage(stdout) };
+  assert.match(agentStartFailure({ provider: 'claude', model: 'claude-opus-5-5' }, result), /did not recognize model "claude-opus-5-5"; the agent never ran/);
+  const ran = { ...result, usage: { inputTokens: 1200, cachedInputTokens: 0, outputTokens: 30 } };
+  assert.equal(agentStartFailure({ provider: 'claude' }, ran), null);
+  assert.equal(agentStartFailure({ provider: 'codex' }, { ...result, usage: {} }), null);
+});
+
+test('a Claude result with no turns is a start failure, but a timeout is a scored outcome', () => {
+  const stdout = JSON.stringify({ type: 'result', is_error: true, num_turns: 0, usage: { input_tokens: 0, output_tokens: 0 } });
+  const result = { command: 'claude', code: 1, timedOut: false, stdout, stderr: '', usage: parseClaudeUsage(stdout) };
+  assert.match(agentStartFailure({ provider: 'claude' }, result), /exited with code 1 before its first turn/);
+  assert.equal(agentStartFailure({ provider: 'claude' }, { ...result, timedOut: true }), null);
+  assert.equal(agentStartFailure({ provider: 'claude' }, { ...result, stdout: '', usage: parseClaudeUsage('') }), null, 'no result object: the agent may have crashed mid-run');
+});
+
+test('a missing agent executable is a start failure, not an agent failure', async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), 'contexttest-missing-agent-'));
+  const result = await runAgent({ agent: { provider: 'command', command: ['contexttest-definitely-missing-agent'] }, prompt: 'x', cwd, environment: { inherit: false } });
+  assert.equal(result.spawnError, 'ENOENT');
+  assert.match(agentStartFailure({ provider: 'command' }, result), /Could not start contexttest-definitely-missing-agent: ENOENT/);
 });
