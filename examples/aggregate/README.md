@@ -38,8 +38,8 @@ Evidence: convincing; 6 paired run(s) across 2 source runs; exact p=0.031.
 
 SOURCE RUNS
 Run                    Version  Commit    Pairs  without-instructions  with-instructions  Δ success  Evidence
-calculator-demo-run-1  0.3.0    00000000  3      0%                    100%               +100 pp    early · p=0.250
-calculator-demo-run-2  0.3.0    00000000  3      0%                    100%               +100 pp    early · p=0.250
+calculator-demo-run-1  0.3.1    00000000  3      0%                    100%               +100 pp    early · p=0.250
+calculator-demo-run-2  0.3.1    00000000  3      0%                    100%               +100 pp    early · p=0.250
 No run contradicts another: 2 favour with-instructions.
 ```
 

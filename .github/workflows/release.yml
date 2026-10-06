@@ -1,6 +1,6 @@
 # Cut a release from a version tag.
 #
-#   git tag v0.3.0 && git push --tags
+#   git tag v0.3.1 && git push --tags
 #
 # The build job always runs: tests, lint, and a packing check. Publishing to
 # npm is gated on a repository variable so a tag produces a green build and a

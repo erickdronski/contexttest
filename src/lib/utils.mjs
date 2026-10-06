@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.3.1';
 export const SECRET_NAME = /(api[_-]?key|token|secret|password|passwd|credential|private[_-]?key|auth)/i;
 export const SECRET_VALUE_PATTERNS = [
   /\bsk-[A-Za-z0-9_-]{16,}\b/g,
