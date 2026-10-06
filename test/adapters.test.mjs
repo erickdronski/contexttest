@@ -124,3 +124,20 @@ test('isolated Claude Code trials disable auto-memory whether the environment is
   assert.deepEqual(describeInvocation({ provider: 'claude' }).env, {});
   assert.deepEqual(describeInvocation({ provider: 'codex', isolate: true }).env, {});
 });
+
+test('configured values reach the agent and are redacted the same way with or without inheritance', async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), 'contexttest-set-env-'));
+  const secret = 'configured-secret-value';
+  // Every configured value is treated as a secret, so the agent proves receipt
+  // with a comparison and its echoes come back redacted in both modes.
+  const print = [process.execPath, '-e', 'const { AGENT_MODE, DEPLOY_TOKEN } = process.env; process.stdout.write(`${AGENT_MODE === "configured"}|${DEPLOY_TOKEN === "configured-secret-value"}|${AGENT_MODE}|${DEPLOY_TOKEN}`)'];
+  for (const inherit of [false, true]) {
+    const result = await runAgent({ agent: { provider: 'mock' }, mock: { command: print }, prompt: 'unused', cwd, environment: { inherit, set: { AGENT_MODE: 'configured', DEPLOY_TOKEN: secret } } });
+    assert.equal(result.stdout, 'true|true|[REDACTED]|[REDACTED]', `inherit: ${inherit}`);
+  }
+  // Isolation still applies last, so configuration cannot reopen auto-memory.
+  for (const inherit of [false, true]) {
+    const env = agentEnvironment({ provider: 'claude', isolate: true }, { inherit, set: { CLAUDE_CODE_DISABLE_AUTO_MEMORY: '0', AGENT_MODE: 'configured' } }, { PATH: '/bin' });
+    assert.deepEqual([env.CLAUDE_CODE_DISABLE_AUTO_MEMORY, env.AGENT_MODE], ['1', 'configured'], `inherit: ${inherit}`);
+  }
+});

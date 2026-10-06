@@ -64,19 +64,18 @@ export function redact(value, additional = []) {
   return output;
 }
 
+// The environment starts from either everything (inherit) or a small
+// allowlist; either way configured `set` values apply on top and `deny`
+// removes names last, so the two modes differ only in their starting point.
 export function safeEnvironment(config = {}, source = process.env) {
   const safeNames = new Set([
     'PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'TEMP', 'TMP', 'LANG', 'LC_ALL',
     'TERM', 'COLORTERM', 'CI', 'GITHUB_ACTIONS', 'GITHUB_WORKSPACE', 'XDG_CONFIG_HOME',
     ...(config.allow ?? []),
   ]);
-  if (config.inherit === true) {
-    const inherited = { ...source };
-    for (const name of config.deny ?? []) delete inherited[name];
-    return inherited;
-  }
   const result = {};
-  for (const name of safeNames) if (source[name] !== undefined) result[name] = source[name];
+  if (config.inherit === true) Object.assign(result, source);
+  else for (const name of safeNames) if (source[name] !== undefined) result[name] = source[name];
   for (const [name, value] of Object.entries(config.set ?? {})) result[name] = String(value);
   for (const name of config.deny ?? []) delete result[name];
   return result;

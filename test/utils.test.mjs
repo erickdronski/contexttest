@@ -59,3 +59,16 @@ test('stable serialization ignores key order', () => {
   assert.equal(stableStringify({ b: 1, a: [{ d: 2, c: 3 }] }), stableStringify({ a: [{ c: 3, d: 2 }], b: 1 }));
   assert.notEqual(stableStringify({ a: 1 }), stableStringify({ a: '1' }));
 });
+
+test('configured values apply on top of the environment whether or not it is inherited', () => {
+  const source = { PATH: '/bin', HOME: '/home/user', INHERITED_ONLY: 'from the shell', MODE: 'shell' };
+  for (const inherit of [false, true]) {
+    const plain = safeEnvironment({ inherit }, source);
+    assert.equal(plain.PATH, '/bin');
+    assert.equal(plain.MODE, inherit ? 'shell' : undefined, `inherit: ${inherit} without set`);
+    const configured = safeEnvironment({ inherit, set: { MODE: 'configured', FLAG: true, COUNT: 3 } }, source);
+    assert.deepEqual([configured.MODE, configured.FLAG, configured.COUNT], ['configured', 'true', '3'], `inherit: ${inherit} with set`);
+    assert.equal(configured.INHERITED_ONLY, inherit ? 'from the shell' : undefined);
+    assert.equal(safeEnvironment({ inherit, set: { MODE: 'configured' }, deny: ['MODE'] }, source).MODE, undefined, 'deny still has the last word');
+  }
+});
