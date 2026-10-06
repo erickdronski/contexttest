@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assessTreatmentDelivery, compareVariants, exactPairedPValue, median, pairTrials, signalFor, summarizeTrials, totalInputTokens, wilsonInterval } from '../src/lib/stats.mjs';
+import { assessTreatmentDelivery, compareVariants, exactPairedPValue, holmAdjust, median, pairTrials, signalFor, summarizeTrials, totalInputTokens, wilsonInterval } from '../src/lib/stats.mjs';
 
 test('median handles odd and even samples', () => {
   assert.equal(median([1, 3, 2]), 2);
@@ -121,4 +121,18 @@ test('doubtful delivery downgrades even a strong-looking result', () => {
   assert.equal(doubtful.treatmentDelivery, 'doubtful');
   assert.equal(doubtful.statisticallySignificant, true, 'the arithmetic is unchanged; only the label is withheld');
   assert.equal(compareVariants(left, right, paired, { status: 'unknown', reason: 'no usage' }).signal, 'strong');
+});
+
+test('Holm adjustment controls chance findings across several sections', () => {
+  assert.deepEqual(holmAdjust([0.01, 0.04, 0.03]), [0.03, 0.06, 0.06]);
+  assert.deepEqual(holmAdjust([0.25, 1, 1]), [0.75, 1, 1]);
+  assert.deepEqual(holmAdjust([]), []);
+});
+
+test('comparisons record whether success, adherence, or duration decided them', () => {
+  const base = { attempts: 6, passRate: 1, meanAssertionScore: 1, medianDurationMs: 100 };
+  assert.equal(compareVariants(base, { ...base, passRate: 0.5 }).basis, 'success');
+  assert.equal(compareVariants(base, { ...base, meanAssertionScore: 0.9 }).basis, 'adherence');
+  assert.equal(compareVariants(base, { ...base, medianDurationMs: 50 }).basis, 'duration');
+  assert.equal(compareVariants(base, base).basis, null);
 });

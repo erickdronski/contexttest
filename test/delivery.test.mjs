@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runAblation } from '../src/lib/ablation.mjs';
 import { runExperiment } from '../src/lib/engine.mjs';
 import { renderHtmlReport, renderTerminalReport } from '../src/lib/reporter.mjs';
 
@@ -161,4 +162,16 @@ test('a cross-provider run bridges only the Claude arm and warns that two things
   assert.deepEqual(report.runtime.agents.map((agent) => [agent.provider, agent.version]), [['claude', '9.9.9 (Fake Claude Code)'], ['command', null]]);
   assert.match(report.treatment.summary, /^Instructions and agent both differ \(claude vs command\)/);
   assert.equal(report.warnings.find((warning) => warning.code === 'confounded').message, report.treatment.summary);
+});
+
+test('ablation arms reach Claude Code through the same bridge', { skip }, async () => {
+  const root = await repository({ 'sectioned.md': '# Rules\n\n## Style\n\n- Two spaces.\n\n## Behavior\n\n- MAKE_GOOD_CHANGE\n' });
+  const config = claudeConfig(await fakeClaude(), { isolate: true });
+  config.variants[1].source = 'sectioned.md';
+  const report = await runAblation({ config, root });
+  assert.deepEqual(report.delivery, { file: 'AGENTS.md', method: 'bridged', bridgedVia: 'CLAUDE.md @import' });
+  assert.ok(report.arms.every((arm) => arm.trials.every((trial) => trial.bridge === 'created')));
+  assert.deepEqual(report.effects.map((effect) => effect.reading), ['no clear effect', 'helps']);
+  assert.ok(report.invocation.args.includes('--strict-mcp-config'));
+  assert.equal(report.runtime.agents[0].version, '9.9.9 (Fake Claude Code)');
 });

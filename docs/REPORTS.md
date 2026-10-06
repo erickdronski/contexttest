@@ -129,6 +129,37 @@ Two fields make agent runs reproducible across machines and releases:
 
 Reports omit the configured task prompts and instruction contents, and ContextTest redacts common credential patterns plus explicitly configured secret values. Redaction is defense in depth—not a guarantee. Failed commands or agents can repeat source excerpts, paths, or private values in surprising forms. Inspect both JSON and expanded HTML trial diagnostics before publishing a report.
 
+## Report kinds and versions
+
+Every report carries `kind` and `schemaVersion`. A kind's fields can grow within a schema version; a breaking change increments it. Reports written before 0.3.0 have no `kind` and are experiment reports.
+
+| `kind` | Written by | `schemaVersion` |
+|---|---|---|
+| `experiment` | `contexttest run` and the GitHub Action | 1 |
+| `ablation` | `contexttest ablate` | 1 |
+
+`contexttest report` reads the kind and refuses an unknown kind, or a schema version newer than it understands, rather than rendering something misleading.
+
+## Ablation reports
+
+An ablation report answers "which sections earn their context?" Open the committed [ablation example](../examples/ablation/output/report.html) or its [JSON](../examples/ablation/output/report.json).
+
+Its top-level keys are `schemaVersion`, `kind`, `version`, `runId`, `generatedAt`, `project`, `commit`, `taskRefs`, `instructionFile`, `agent`, `delivery`, `invocation`, `ablation`, `experiment`, `runtime`, `tasks`, `arms`, `effects`, `warnings`, and `artifacts`.
+
+- `ablation` describes the file: the ablated variant and source, the heading level, total bytes and digest, the preamble, and every section's number, title, starting line, line and byte counts, and whether it was selected.
+- `arms` holds one entry per arm—`full`, then `without-<n>`—with its instruction bytes and digest, trials, and summary.
+- `effects` holds one entry per selected section: `deltas` (full minus without, for success, adherence, duration, diff lines, changed files, input tokens, and cost), the paired `comparison` with its exact p-value and delivery check, `adjustedPValue` (Holm), `signal`, `reading`, and per-task `taskResults`.
+
+Read an ablation in this order:
+
+1. **Warnings** — doubtful delivery for a section means its removal barely changed token usage.
+2. **Full-file success** — if the full file rarely succeeds, every section's effect is measured near a floor.
+3. **Reading and evidence per section** — `helps` and `hurts` require a difference in success or adherence; labels use the Holm-adjusted p-value, because testing many sections at once produces chance findings.
+4. **Deltas** — duration, diff size, and cost show what a section costs or saves, without a verdict.
+5. **Task breakdown** — a section can help one task family and hurt another.
+
+Absence of evidence is not evidence of absence: "no clear effect" after three attempts means untested. Sections can also interact—two rules that duplicate each other each look useless alone. Ablation reports include section headings, which come from your instruction file, but never section bodies.
+
 ## Regenerating the HTML
 
 The JSON record is sufficient to reproduce the presentation:
@@ -137,4 +168,4 @@ The JSON record is sufficient to reproduce the presentation:
 contexttest report path/to/report.json
 ```
 
-The committed example is guarded by a test that renders its JSON again and requires byte-for-byte equality with the checked-in HTML.
+It works for every report kind, including reports written by earlier versions. The committed examples are guarded by tests that render their JSON again and require byte-for-byte equality with the checked-in HTML.

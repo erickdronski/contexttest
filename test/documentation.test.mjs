@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderHtmlReport } from '../src/lib/reporter.mjs';
+import { renderHtmlReport, renderReport } from '../src/lib/reporter.mjs';
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -21,7 +21,7 @@ test('public documentation has no broken relative Markdown links', async () => {
   const files = [
     path.join(repository, 'README.md'),
     ...(await markdownFiles(path.join(repository, 'docs'))),
-    path.join(repository, 'examples/calculator/README.md'),
+    ...(await markdownFiles(path.join(repository, 'examples'))).filter((file) => path.basename(file) === 'README.md'),
   ];
   const failures = [];
   for (const file of files) {
@@ -50,4 +50,22 @@ test('committed demonstration report is portable and regenerates byte for byte',
   assert.equal(json.includes('.contexttest/worktrees'), false);
   assert.equal(json.includes('/Users/'), false);
   assert.equal(html, renderHtmlReport(report));
+});
+
+test('committed ablation report finds the one section that matters and regenerates byte for byte', async () => {
+  const output = path.join(repository, 'examples/ablation/output');
+  const json = await readFile(path.join(output, 'report.json'), 'utf8');
+  const report = JSON.parse(json);
+  const html = await readFile(path.join(output, 'report.html'), 'utf8');
+  assert.equal(report.kind, 'ablation');
+  assert.equal(report.agent.provider, 'mock');
+  assert.deepEqual(report.arms.map((arm) => [arm.name, arm.trials.length]), [['full', 3], ['without-1', 3], ['without-2', 3], ['without-3', 3]]);
+  assert.deepEqual(report.effects.map((effect) => [effect.section.title, effect.reading]), [['Formatting', 'no clear effect'], ['Public API', 'helps'], ['Pull requests', 'no clear effect']]);
+  assert.equal(report.effects[1].deltas.passRate, 1);
+  assert.equal(report.effects[1].signal, 'early');
+  assert.ok(report.effects.every((effect) => effect.deltas.medianDurationMs === 0), 'normalized timing shows no invented duration effect');
+  assert.equal(report.experiment.plannedTrials, 12);
+  assert.equal(json.includes('.contexttest/worktrees'), false);
+  assert.equal(json.includes('/Users/'), false);
+  assert.equal(html, renderReport(report));
 });

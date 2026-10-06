@@ -1,6 +1,5 @@
 {
   "schemaVersion": 1,
-  "kind": "experiment",
   "version": "0.2.0",
   "runId": "calculator-demo-example",
   "generatedAt": "2026-07-24T00:00:00.000Z",
@@ -12,28 +11,18 @@
   "instructionFile": "AGENTS.md",
   "agent": {
     "provider": "mock",
-    "model": null,
-    "isolate": false
+    "model": null
   },
   "experiment": {
     "attemptsPerVariant": 3,
     "concurrency": 2,
     "setupCommands": 0,
-    "configDigest": "78658624f0de9bda2546d2668d85e6d1d6c3f96f5434fc3d81f5c30657e34918",
-    "order": "sequential",
-    "seed": null
+    "configDigest": "78658624f0de9bda2546d2668d85e6d1d6c3f96f5434fc3d81f5c30657e34918"
   },
   "runtime": {
     "node": "v20+",
     "platform": "portable-example",
-    "arch": "portable",
-    "agents": [
-      {
-        "provider": "mock",
-        "executable": "mock",
-        "version": null
-      }
-    ]
+    "arch": "portable"
   },
   "tasks": [
     "safe-division"
@@ -84,7 +73,6 @@
       ],
       "comparison": {
         "winner": "candidate",
-        "basis": "success",
         "reason": "100 percentage-point difference in task success.",
         "passRateDelta": 1,
         "assertionScoreDelta": 0.19999999999999984,
@@ -100,35 +88,13 @@
           "pValue": 0.25000000000000006
         },
         "pValue": 0.25000000000000006,
-        "statisticallySignificant": false,
-        "treatmentDelivery": "unknown",
-        "deliveryCheck": {
-          "status": "unknown",
-          "reason": "The agent did not report token usage."
-        }
+        "statisticallySignificant": false
       }
     }
   ],
   "variants": [
     {
       "name": "without-instructions",
-      "agent": {
-        "provider": "mock",
-        "model": null,
-        "isolate": false,
-        "digest": "90890dd2a12129e8"
-      },
-      "instructions": {
-        "mode": "disabled",
-        "bytes": 0,
-        "digest": null
-      },
-      "delivery": {
-        "file": "AGENTS.md",
-        "method": "unknown",
-        "bridgedVia": null
-      },
-      "invocation": null,
       "trials": [
         {
           "id": "safe-division-without-instructions-1",
@@ -351,24 +317,6 @@
     },
     {
       "name": "with-instructions",
-      "agent": {
-        "provider": "mock",
-        "model": null,
-        "isolate": false,
-        "digest": "90890dd2a12129e8"
-      },
-      "instructions": {
-        "mode": "source",
-        "source": "AGENTS.candidate.md",
-        "bytes": 250,
-        "digest": "1d682c8d5cbe7d2f059577e31a726c6c18868ff061ee678e26ec12d76de2c7b3"
-      },
-      "delivery": {
-        "file": "AGENTS.md",
-        "method": "unknown",
-        "bridgedVia": null
-      },
-      "invocation": null,
       "trials": [
         {
           "id": "safe-division-with-instructions-1",
@@ -590,16 +538,8 @@
       }
     }
   ],
-  "treatment": {
-    "differs": [
-      "instructions"
-    ],
-    "agentSettings": [],
-    "summary": "Only the instructions differ; both arms use mock."
-  },
   "comparison": {
     "winner": "candidate",
-    "basis": "success",
     "reason": "100 percentage-point difference in task success.",
     "passRateDelta": 1,
     "assertionScoreDelta": 0.19999999999999984,
@@ -615,14 +555,8 @@
       "pValue": 0.25000000000000006
     },
     "pValue": 0.25000000000000006,
-    "statisticallySignificant": false,
-    "treatmentDelivery": "unknown",
-    "deliveryCheck": {
-      "status": "unknown",
-      "reason": "The agent did not report token usage."
-    }
+    "statisticallySignificant": false
   },
-  "warnings": [],
   "artifacts": {
     "json": "examples/calculator/output/report.json",
     "html": "examples/calculator/output/report.html"

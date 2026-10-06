@@ -271,6 +271,7 @@ export async function runExperiment({ config, root, taskFilter, keepWorktrees = 
   const treatment = describeTreatment(variants[0], variants[1], agents);
   const report = {
     schemaVersion: 1,
+    kind: 'experiment',
     version: VERSION,
     runId: run.runId,
     generatedAt: new Date().toISOString(),

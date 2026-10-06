@@ -1,66 +1,87 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
+import { analyzeAblation, runAblation } from '../src/lib/ablation.mjs';
 import { loadConfig } from '../src/lib/config.mjs';
 import { analyzeExperiment, runExperiment } from '../src/lib/engine.mjs';
-import { renderHtmlReport, renderTerminalReport } from '../src/lib/reporter.mjs';
+import { renderReport, renderReportTerminal } from '../src/lib/reporter.mjs';
 import { ensureDir, writeJson } from '../src/lib/utils.mjs';
 
+// Regenerate the committed example reports. Every example runs for real in
+// detached worktrees; only machine-specific metadata, timestamps, commit IDs,
+// and timing noise are normalized afterwards, and all numbers are re-derived
+// from the normalized trials with the same analysis the engine uses.
 const repository = path.resolve(import.meta.dirname, '..');
-const configPath = path.join(repository, 'examples/calculator/contexttest.json');
-const outputDirectory = path.join(repository, 'examples/calculator/output');
+const ZERO_COMMIT = '0000000000000000000000000000000000000000';
+const PORTABLE_RUNTIME = { node: 'v20+', platform: 'portable-example', arch: 'portable' };
 
-function normalizeTrial(trial, variantIndex) {
-  const baseline = variantIndex === 0;
-  const durationMs = (baseline ? 310 : 290) + trial.attempt * 2;
+function normalizeTrial(trial, { durationMs, failure, stdout }) {
   return {
     ...trial,
     durationMs,
     assertions: trial.assertions.map((assertion) => {
       if (assertion.type !== 'command') return assertion;
-      return {
-        ...assertion,
-        durationMs: 120,
-        stdout: assertion.pass ? '' : 'Test failed: the existing add export was not preserved.\n',
-        stderr: '',
-      };
+      return { ...assertion, durationMs: 120, stdout: assertion.pass ? '' : failure, stderr: '' };
     }),
-    stdout: baseline ? 'Completed without repository instructions.\n' : 'Completed with repository instructions.\n',
+    stdout: stdout ?? trial.stdout,
     stderr: '',
   };
 }
 
-const ZERO_COMMIT = '0000000000000000000000000000000000000000';
-
-function normalizeReport(source) {
-  const taskRefs = Object.fromEntries(Object.keys(source.taskRefs).map((name) => [name, ZERO_COMMIT]));
-  const { variants, comparison, taskResults } = analyzeExperiment({
-    variants: source.variants.map(({ summary, ...variant }, variantIndex) => ({ ...variant, trials: variant.trials.map((trial) => normalizeTrial(trial, variantIndex)) })),
-    tasks: source.tasks,
-    taskRefs,
-    provider: source.agent.provider,
-  });
+function portable(source, runId, directory) {
   return {
-    ...source,
-    runId: 'calculator-demo-example',
+    runId,
     generatedAt: '2026-07-24T00:00:00.000Z',
     commit: ZERO_COMMIT,
-    taskRefs,
-    runtime: { node: 'v20+', platform: 'portable-example', arch: 'portable', agents: source.runtime.agents },
-    variants,
-    taskResults,
-    comparison,
-    artifacts: {
-      json: 'examples/calculator/output/report.json',
-      html: 'examples/calculator/output/report.html',
-    },
+    taskRefs: Object.fromEntries(Object.keys(source.taskRefs).map((name) => [name, ZERO_COMMIT])),
+    runtime: { ...PORTABLE_RUNTIME, agents: source.runtime.agents },
+    artifacts: { json: `${directory}/report.json`, html: `${directory}/report.html` },
   };
 }
 
-const loaded = await loadConfig(repository, configPath);
-const source = await runExperiment(loaded);
-const report = normalizeReport(source);
-await ensureDir(outputDirectory);
-await writeJson(path.join(outputDirectory, 'report.json'), report);
-await writeFile(path.join(outputDirectory, 'report.html'), renderHtmlReport(report), 'utf8');
-process.stdout.write(renderTerminalReport(report, { color: false }));
-process.stdout.write(`Updated ${path.relative(repository, outputDirectory)}.\n`);
+async function calculator() {
+  const loaded = await loadConfig(repository, path.join(repository, 'examples/calculator/contexttest.json'));
+  const source = await runExperiment(loaded);
+  const metadata = portable(source, 'calculator-demo-example', 'examples/calculator/output');
+  const { variants, comparison, taskResults } = analyzeExperiment({
+    variants: source.variants.map(({ summary, ...variant }, variantIndex) => ({
+      ...variant,
+      trials: variant.trials.map((trial) => normalizeTrial(trial, {
+        durationMs: (variantIndex === 0 ? 310 : 290) + trial.attempt * 2,
+        failure: 'Test failed: the existing add export was not preserved.\n',
+        stdout: variantIndex === 0 ? 'Completed without repository instructions.\n' : 'Completed with repository instructions.\n',
+      })),
+    })),
+    tasks: source.tasks,
+    taskRefs: metadata.taskRefs,
+    provider: source.agent.provider,
+  });
+  return { report: { ...source, ...metadata, variants, taskResults, comparison }, directory: 'examples/calculator/output' };
+}
+
+async function ablation() {
+  const loaded = await loadConfig(repository, path.join(repository, 'examples/ablation/contexttest.json'));
+  const source = await runAblation(loaded);
+  const metadata = portable(source, 'inventory-ablation-example', 'examples/ablation/output');
+  // Every arm gets the same timing, so the committed report cannot show a
+  // duration effect that was only scheduling noise.
+  const { arms, effects } = analyzeAblation({
+    arms: source.arms.map(({ summary, ...arm }) => ({
+      ...arm,
+      trials: arm.trials.map((trial) => normalizeTrial(trial, { durationMs: 300 + trial.attempt * 2, failure: 'Test failed: the existing addItem export was not preserved.\n' })),
+    })),
+    tasks: source.tasks,
+    taskRefs: metadata.taskRefs,
+    provider: source.agent.provider,
+  });
+  return { report: { ...source, ...metadata, arms, effects }, directory: 'examples/ablation/output' };
+}
+
+for (const example of [calculator, ablation]) {
+  const { report, directory } = await example();
+  const output = path.join(repository, directory);
+  await ensureDir(output);
+  await writeJson(path.join(output, 'report.json'), report);
+  await writeFile(path.join(output, 'report.html'), renderReport(report), 'utf8');
+  process.stdout.write(renderReportTerminal(report, { color: false }));
+  process.stdout.write(`Updated ${directory}.\n`);
+}

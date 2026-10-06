@@ -5,7 +5,8 @@ import { createStarterConfig, loadConfig, variantAgents } from './lib/config.mjs
 import { runExperiment } from './lib/engine.mjs';
 import { deliveryFor, deliveryWarning, ISOLATION_FLAGS } from './lib/adapters.mjs';
 import { assertGitRepository, currentCommit, pathExistsAtRef } from './lib/git.mjs';
-import { renderHtmlReport, renderTerminalReport } from './lib/reporter.mjs';
+import { planAblation, runAblation } from './lib/ablation.mjs';
+import { renderAblationPlan, renderAblationTerminal, renderReport, renderTerminalReport, reportKind } from './lib/reporter.mjs';
 import { exists, findExecutable, isPathInside, parseArgs, runProcess, stableStringify, VERSION, writeJson } from './lib/utils.mjs';
 
 const HELP = `
@@ -15,6 +16,9 @@ Usage
   contexttest init [--force]
   contexttest run [--config path] [--task name] [--attempts n] [--seed n]
                   [--keep-worktrees] [--report-dir path] [--json]
+  contexttest ablate [--config path] [--variant name] [--level 2]
+                     [--sections "A,B"] [--task name] [--attempts n] [--seed n]
+                     [--dry-run] [--keep-worktrees] [--report-dir path] [--json]
   contexttest doctor [--config path]
   contexttest report <report.json> [--output report.html]
   contexttest --version
@@ -23,6 +27,8 @@ Examples
   contexttest init
   contexttest run --attempts 5
   contexttest run --task focused-change --json
+  contexttest ablate --dry-run
+  contexttest ablate --sections "Testing,Style" --attempts 5
 `;
 
 function log(message = '') { process.stdout.write(`${message}\n`); }
@@ -69,25 +75,49 @@ async function init(flags) {
 
 async function run(flags) {
   const loaded = await loadWithOverrides(flags);
-  let completed = 0;
   const report = await runExperiment({
     ...loaded,
     taskFilter: valueFlag(flags, 'task'),
     keepWorktrees: Boolean(flags.keepWorktrees),
     reportDir: valueFlag(flags, 'reportDir'),
-    onEvent(event) {
-      if (flags.json) return;
-      if (event.type === 'experiment:start') log(`\nRunning ${event.jobs} trials in isolated worktrees${event.order === 'seeded' ? ` (seeded order, seed ${event.seed})` : ''}…`);
-      if (event.type === 'trial:complete' || event.type === 'trial:error') {
-        completed += 1;
-        const trial = event.trial;
-        log(`[${completed}/${event.total}] ${trial.variant} / ${trial.task} / ${trial.attempt}  ${trial.passed ? 'PASS' : 'FAIL'}`);
-      }
-    },
+    onEvent: progress(flags),
   });
   if (flags.json) log(JSON.stringify(report));
   else log(renderTerminalReport(report));
   if (report.comparison.winner === 'baseline') process.exitCode = 2;
+}
+
+function progress(flags) {
+  let completed = 0;
+  return (event) => {
+    if (flags.json) return;
+    if (event.type === 'experiment:start' || event.type === 'ablation:start') log(`\nRunning ${event.jobs} trials in isolated worktrees${event.order === 'seeded' ? ` (seeded order, seed ${event.seed})` : ''}…`);
+    if (event.type === 'trial:complete' || event.type === 'trial:error') {
+      completed += 1;
+      const trial = event.trial;
+      log(`[${completed}/${event.total}] ${trial.variant} / ${trial.task} / ${trial.attempt}  ${trial.passed ? 'PASS' : 'FAIL'}`);
+    }
+  };
+}
+
+async function ablate(flags) {
+  const loaded = await loadWithOverrides(flags);
+  const options = {
+    ...loaded,
+    variantName: valueFlag(flags, 'variant'),
+    level: integerFlag(flags, 'level') ?? 2,
+    sections: valueFlag(flags, 'sections'),
+    taskFilter: valueFlag(flags, 'task'),
+  };
+  const plan = await planAblation(options);
+  if (flags.dryRun) {
+    if (flags.json) log(JSON.stringify({ variant: plan.variant.name, source: plan.variant.source ?? null, level: plan.level, sections: plan.split.sections.map((section) => ({ ...section, selected: plan.selected.includes(section) })), budget: plan.budget }));
+    else log(`\n${renderAblationPlan(plan)}\n\nDry run: no worktrees were created and no agent ran.`);
+    return;
+  }
+  if (!flags.json) log(`\n${renderAblationPlan(plan)}`);
+  const report = await runAblation({ ...options, keepWorktrees: Boolean(flags.keepWorktrees), reportDir: valueFlag(flags, 'reportDir'), onEvent: progress(flags) });
+  log(flags.json ? JSON.stringify(report) : renderAblationTerminal(report));
 }
 
 async function doctor(flags) {
@@ -159,9 +189,10 @@ async function reportCommand(positional, flags) {
   const input = positional[1];
   if (!input) throw new Error('report requires a report.json path.');
   const data = JSON.parse(await readFile(path.resolve(input), 'utf8'));
+  const kind = reportKind(data);
   const output = path.resolve(valueFlag(flags, 'output') ?? path.join(path.dirname(input), 'report.html'));
-  await writeFile(output, renderHtmlReport(data), 'utf8');
-  log(`Wrote ${output}`);
+  await writeFile(output, renderReport(data), 'utf8');
+  log(`Wrote ${output} (${kind} report)`);
 }
 
 async function main() {
@@ -171,6 +202,7 @@ async function main() {
   if (flags.help || !command || command === 'help') return log(HELP.trim());
   if (command === 'init') return init(flags);
   if (command === 'run') return run(flags);
+  if (command === 'ablate') return ablate(flags);
   if (command === 'doctor') return doctor(flags);
   if (command === 'report') return reportCommand(positional, flags);
   throw new Error(`Unknown command: ${command}\n\n${HELP.trim()}`);

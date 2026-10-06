@@ -81,6 +81,19 @@ export function signalFor(attempts, pValue) {
   return 'directional';
 }
 
+// Holm's step-down adjustment: testing several sections at once must not
+// manufacture a "convincing" result by chance. Returns p-values in input order.
+export function holmAdjust(pValues) {
+  const order = pValues.map((value, index) => ({ value: value ?? 1, index })).sort((a, b) => a.value - b.value);
+  const adjusted = new Array(pValues.length);
+  let running = 0;
+  for (const [rank, { value, index }] of order.entries()) {
+    running = Math.max(running, Math.min(1, (pValues.length - rank) * value));
+    adjusted[index] = running;
+  }
+  return adjusted;
+}
+
 // Total prompt-side tokens one trial sent, including cache reads and writes.
 // Claude Code reports cache tokens separately from input; Codex includes them.
 export function totalInputTokens(usage = {}, provider) {
@@ -129,17 +142,21 @@ export function compareVariants(left, right, paired = null, delivery = null) {
   const passDelta = right.passRate - left.passRate;
   const scoreDelta = (right.meanAssertionScore ?? 0) - (left.meanAssertionScore ?? 0);
   let winner = 'tie';
+  let basis = null;
   let reason = 'The variants are effectively tied on the measured outcomes.';
   if (Math.abs(passDelta) >= 0.1) {
     winner = passDelta > 0 ? 'candidate' : 'baseline';
+    basis = 'success';
     reason = `${Math.abs(passDelta * 100).toFixed(0)} percentage-point difference in task success.`;
   } else if (Math.abs(scoreDelta) >= 0.05) {
     winner = scoreDelta > 0 ? 'candidate' : 'baseline';
+    basis = 'adherence';
     reason = `${Math.abs(scoreDelta * 100).toFixed(0)} percentage-point difference in assertion adherence.`;
   } else if (left.passRate === right.passRate && left.medianDurationMs && right.medianDurationMs) {
     const durationDelta = (right.medianDurationMs - left.medianDurationMs) / left.medianDurationMs;
     if (Math.abs(durationDelta) >= 0.15) {
       winner = durationDelta < 0 ? 'candidate' : 'baseline';
+      basis = 'duration';
       reason = `${Math.abs(durationDelta * 100).toFixed(0)}% difference in median duration at equal success.`;
     }
   }
@@ -149,5 +166,5 @@ export function compareVariants(left, right, paired = null, delivery = null) {
   // a confident label, whatever its p-value says.
   const signal = delivery?.status === 'doubtful' ? 'doubtful' : signalFor(attempts, pValue);
   const deliveryFields = delivery ? { treatmentDelivery: delivery.status, deliveryCheck: delivery } : {};
-  return { winner, reason, passRateDelta: passDelta, assertionScoreDelta: scoreDelta, signal, minimumAttempts: attempts, paired, pValue, statisticallySignificant: pValue !== null && pValue <= 0.05, ...deliveryFields };
+  return { winner, basis, reason, passRateDelta: passDelta, assertionScoreDelta: scoreDelta, signal, minimumAttempts: attempts, paired, pValue, statisticallySignificant: pValue !== null && pValue <= 0.05, ...deliveryFields };
 }

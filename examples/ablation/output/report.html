@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>inventory-ablation-demo · ContextTest</title>
+<style>
+:root{--paper:#f7f8fb;--ink:#101828;--muted:#667085;--line:#d8dee9;--blue:#174ea6;--blue-soft:#eaf1ff;--green:#08775c;--green-soft:#e2f6ef;--red:#b42318;--red-soft:#feecea;--amber:#9a6700;--white:#fff;--shadow:0 16px 50px rgba(16,24,40,.08)}*{box-sizing:border-box}html{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}body{margin:0}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.shell{max-width:1180px;margin:0 auto;padding:48px 28px 80px}.masthead{display:flex;justify-content:space-between;align-items:center;padding-bottom:18px;border-bottom:1px solid var(--ink)}.wordmark{font:700 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em}.run-meta{font:500 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:70px;align-items:end;padding:72px 0 62px}.eyebrow{font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;color:var(--blue);text-transform:uppercase}.hero h1{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;font-size:clamp(52px,8vw,104px);font-weight:400;line-height:.88;letter-spacing:-.055em;margin:18px 0 0;max-width:760px}.hero h1 em{font-style:italic;color:var(--blue)}.verdict{border-left:3px solid var(--blue);padding:3px 0 3px 24px}.verdict.positive{border-color:var(--green)}.verdict.negative{border-color:var(--red)}.verdict-label{font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:.12em}.verdict h2{font:700 28px/1.1 ui-sans-serif,sans-serif;margin:12px 0 10px}.verdict p{margin:0;color:var(--muted);max-width:36ch}.verdict p.treatment{margin-top:10px;color:var(--ink);font-size:14px}.signal{display:inline-block;margin-top:16px;padding:5px 8px;border:1px solid var(--line);font:600 11px/1 ui-monospace,monospace;text-transform:uppercase}.comparison{background:var(--white);border:1px solid var(--line);box-shadow:var(--shadow)}table{width:100%;border-collapse:collapse}th,td{padding:18px 22px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}thead th{background:#f0f3f8;font:700 11px/1 ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}thead th:first-child,tbody th{text-align:left}tbody th{font-size:13px;font-weight:600;color:var(--muted)}tbody td{font:650 16px/1 ui-monospace,monospace}.winner{color:var(--green);background:var(--green-soft)}.loser{color:var(--muted)}.section{margin-top:72px}.section-head{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--ink);padding-bottom:12px;margin-bottom:24px}.section h2{font-family:"Iowan Old Style",Georgia,serif;font-size:35px;font-weight:400;letter-spacing:-.025em;margin:0}.section-note{color:var(--muted);font-size:13px}.trial-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.lane-label{font:700 12px/1 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em;margin:0 0 13px;color:var(--blue)}.trial{background:var(--white);border:1px solid var(--line);margin-bottom:10px}.trial summary{display:grid;grid-template-columns:32px 1fr auto;gap:10px 12px;align-items:center;padding:16px 18px;cursor:pointer;list-style:none}.trial summary::-webkit-details-marker{display:none}.trial-index{font:600 11px/1 ui-monospace,monospace;color:var(--muted)}.trial summary strong{font:750 11px/1 ui-monospace,monospace;color:var(--green)}.trial.fail summary strong{color:var(--red)}.trial summary small{grid-column:2/4;color:var(--muted);font:500 11px/1.3 ui-monospace,monospace}.trial-body{border-top:1px solid var(--line);padding:18px}.trial-body h4{font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}.trial-body h4:first-child{margin-top:0}.trial-body ul{list-style:none;margin:0;padding:0}.trial-body li{display:flex;gap:8px;font-size:13px;padding:6px 0}.trial-body .ok span{color:var(--green)}.trial-body .bad span{color:var(--red)}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#111827;color:#e5e7eb;padding:14px;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:340px;overflow:auto}.method{display:grid;grid-template-columns:1fr 1fr;gap:40px}.method p{color:var(--muted);margin:0}.method code{font:600 12px ui-monospace,monospace;color:var(--blue)}footer{margin-top:80px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font:500 11px ui-monospace,monospace}.alert{border:1px solid var(--amber);border-left-width:4px;background:#fff8e6;padding:16px 22px;margin:0 0 28px}.alert strong{font:700 12px/1.2 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}.alert ul{margin:8px 0 0;padding-left:18px}.alert li{margin:4px 0}.up{color:var(--green)}.down{color:var(--red)}.text{text-align:left}td.text{font:500 13px/1.4 ui-sans-serif,sans-serif}th.section-name{font-weight:650;color:var(--ink)}.reading{font:700 11px/1 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.06em}.reading.helps{color:var(--green)}.reading.hurts{color:var(--red)}.lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}.wide{overflow-x:auto}.wide th,.wide td{white-space:nowrap;padding:14px 12px}.wide tbody td{font-size:14px}@media(max-width:780px){.shell{padding:28px 16px 52px}.hero{grid-template-columns:1fr;gap:36px;padding:52px 0 44px}.hero h1{font-size:58px}.trial-grid,.method{grid-template-columns:1fr}.comparison{overflow-x:auto}th,td{padding:14px 13px}.run-meta{display:none}footer{display:block}footer span{display:block;margin-top:8px}}@media(prefers-reduced-motion:no-preference){.hero>*{animation:rise .55s ease-out both}.hero>*:nth-child(2){animation-delay:.08s}.comparison{animation:rise .55s .14s ease-out both}@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}}@media print{.shell{max-width:none;padding:20px}.comparison{box-shadow:none}.trial{break-inside:avoid}}
+</style></head><body><main class="shell">
+<header class="masthead"><div class="wordmark">CONTEXTTEST</div><div class="run-meta">inventory-ablation-example · 0000000000000</div></header>
+<section class="hero"><div><div class="eyebrow">Instruction ablation / inventory-ablation-demo</div><h1>Which sections <em>earn</em> their context?</h1></div><div class="verdict positive"><div class="verdict-label">RESULT</div><h2>1 of 3 sections changed the outcome</h2><p>Helps: §2 Public API. No clear effect: §1 Formatting, §3 Pull requests.</p><p class="treatment">Every arm used mock; only the removed section differs from the full file.</p><span class="signal">full file 100% · 3 attempts per arm · 12 runs</span></div></section>
+<section class="comparison wide" aria-label="Section effects"><table><caption class="sr-only">Marginal effect of each instruction section</caption><thead><tr><th>Section</th><th>Without it</th><th>Δ success</th><th>Δ adherence</th><th>Δ duration</th><th>Δ diff lines</th><th>Δ cost</th><th>Reading</th><th>Evidence</th><th>Exact p (Holm)</th></tr></thead><tbody>
+<tr><th class="section-name">§1 Formatting</th><td>100%</td><td class="">0 pp</td><td>0 pp</td><td>0ms</td><td>0</td><td>—</td><td><span class="reading ">no clear effect</span></td><td>early</td><td>1.000 (1.000)</td></tr>
+<tr><th class="section-name">§2 Public API</th><td>0%</td><td class="up">+100 pp</td><td>+20 pp</td><td>0ms</td><td>0</td><td>—</td><td><span class="reading helps">helps</span></td><td>early</td><td>0.250 (0.750)</td></tr>
+<tr><th class="section-name">§3 Pull requests</th><td>100%</td><td class="">0 pp</td><td>0 pp</td><td>0ms</td><td>0</td><td>—</td><td><span class="reading ">no clear effect</span></td><td>early</td><td>1.000 (1.000)</td></tr>
+</tbody></table></section>
+<section class="section"><div class="section-head"><h2>Instruction outline</h2><span class="section-note">AGENTS.candidate.md · 379 bytes · split at level-2 headings</span></div><div class="comparison"><table><caption class="sr-only">Parts of the instruction file</caption><thead><tr><th>Part</th><th>Lines</th><th class="text">Treatment</th></tr></thead><tbody><tr><th>Preamble</th><td>4</td><td class="text">kept in every arm</td></tr><tr><th>§1 Formatting</th><td>5</td><td class="text">ablated · 78 bytes</td></tr><tr><th>§2 Public API</th><td>5</td><td class="text">ablated · 111 bytes</td></tr><tr><th>§3 Pull requests</th><td>4</td><td class="text">ablated · 87 bytes</td></tr></tbody></table></div></section>
+
+<section class="section"><div class="section-head"><h2>Trial record</h2><span class="section-note">Open any run to inspect its evidence.</span></div><div class="lanes"><div><div class="lane-label">full file</div><details class="trial pass">
+    <summary><span class="trial-index">01</span><span>remove-item</span><strong>PASS</strong><small>302ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details><details class="trial pass">
+    <summary><span class="trial-index">02</span><span>remove-item</span><strong>PASS</strong><small>304ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details><details class="trial pass">
+    <summary><span class="trial-index">03</span><span>remove-item</span><strong>PASS</strong><small>306ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details></div><div><div class="lane-label">without §1 Formatting</div><details class="trial pass">
+    <summary><span class="trial-index">01</span><span>remove-item</span><strong>PASS</strong><small>302ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details><details class="trial pass">
+    <summary><span class="trial-index">02</span><span>remove-item</span><strong>PASS</strong><small>304ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details><details class="trial pass">
+    <summary><span class="trial-index">03</span><span>remove-item</span><strong>PASS</strong><small>306ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details></div><div><div class="lane-label">without §2 Public API</div><details class="trial fail">
+    <summary><span class="trial-index">01</span><span>remove-item</span><strong>FAIL</strong><small>302ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="bad"><span>×</span>node exited 1.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      <h4>Agent diagnostics</h4><pre>Rewrote inventory.mjs around removeItem.
+</pre>
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details><details class="trial fail">
+    <summary><span class="trial-index">02</span><span>remove-item</span><strong>FAIL</strong><small>304ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="bad"><span>×</span>node exited 1.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      <h4>Agent diagnostics</h4><pre>Rewrote inventory.mjs around removeItem.
+</pre>
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details><details class="trial fail">
+    <summary><span class="trial-index">03</span><span>remove-item</span><strong>FAIL</strong><small>306ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="bad"><span>×</span>node exited 1.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      <h4>Agent diagnostics</h4><pre>Rewrote inventory.mjs around removeItem.
+</pre>
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details></div><div><div class="lane-label">without §3 Pull requests</div><details class="trial pass">
+    <summary><span class="trial-index">01</span><span>remove-item</span><strong>PASS</strong><small>302ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details><details class="trial pass">
+    <summary><span class="trial-index">02</span><span>remove-item</span><strong>PASS</strong><small>304ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details><details class="trial pass">
+    <summary><span class="trial-index">03</span><span>remove-item</span><strong>PASS</strong><small>306ms · 1 files · 4 lines</small></summary>
+    <div class="trial-body">
+      <h4>Assertions</h4>
+      <ul><li class="ok"><span>✓</span>Agent completed successfully.</li><li class="ok"><span>✓</span>node passed.</li><li class="ok"><span>✓</span>All changes stayed inside allowed paths.</li><li class="ok"><span>✓</span>1 changed file; limit 1.</li><li class="ok"><span>✓</span>4 changed lines; limit 20.</li></ul>
+      
+      <h4>Changed files</h4><pre>examples/ablation/fixture/inventory.mjs</pre>
+    </div>
+  </details></div></div></section>
+<section class="section"><div class="section-head"><h2>How to read this</h2><span class="section-note">Absence of evidence is not evidence of absence.</span></div><div class="method"><p>Each arm received the same tasks from the same Git commit in detached worktrees, with the instruction file either complete or missing exactly one section. The full arm runs once per task and attempt and is paired with every other arm by task and attempt. Δ is the full file minus the file without that section, so a positive change in success means the section helps. Readings come from task success and assertion adherence only; duration, diff size, and cost are shown as measurements, because medians over a few runs are too noisy to judge a section on their own.</p><p>p-values come from a two-sided exact test over paired disagreements. Testing several sections at once invites chance findings, so evidence labels use Holm-adjusted p-values. With few attempts, "no clear effect" means a section is untested, not that it is useless; a section may also matter only in combination with another.</p></div></section>
+<footer><span>Generated locally by ContextTest 0.2.0 · config 0c43037667</span><span>Section headings appear in this report; section bodies do not.</span></footer>
+</main></body></html>

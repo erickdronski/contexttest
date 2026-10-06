@@ -45,7 +45,7 @@ try {
   config.project = 'clean-install-smoke';
   config.agent = { provider: 'mock', timeoutMinutes: 1 };
   config.trials = { attempts: 1, concurrency: 1 };
-  config.variants = [{ name: 'without', disabled: true }, { name: 'with', content: 'MAKE_EXPECTED_CHANGE\n' }];
+  config.variants = [{ name: 'without', disabled: true }, { name: 'with', content: '# Rules\n\n## Change\n\nMAKE_EXPECTED_CHANGE\n\n## Tone\n\nBe brief.\n' }];
   config.tasks = [{ name: 'change', prompt: 'change value', mock: { command: [process.execPath, 'agent.mjs'] }, assertions: [{ type: 'fileContains', path: 'value.txt', value: 'expected' }] }];
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
   await run('git', ['add', '.gitignore', 'AGENTS.candidate.md', 'agent.mjs', 'contexttest.json', 'value.txt']);
@@ -55,6 +55,11 @@ try {
   const report = JSON.parse(experiment.stdout.trim());
   if (report.comparison.winner !== 'candidate') throw new Error(`Expected candidate to lead; got ${report.comparison.winner}`);
   for (const artifact of [report.artifacts.json, report.artifacts.html]) await readFile(artifact);
+
+  const ablation = JSON.parse((await run(bin, ['ablate', '--json'])).stdout.trim());
+  const readings = ablation.effects.map((effect) => `${effect.section.title}:${effect.reading}`).join(', ');
+  if (readings !== 'Change:helps, Tone:no clear effect') throw new Error(`Unexpected ablation readings: ${readings}`);
+  await run(bin, ['report', ablation.artifacts.json]);
   process.stdout.write(`Clean-install smoke passed for ContextTest ${version}.\n`);
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

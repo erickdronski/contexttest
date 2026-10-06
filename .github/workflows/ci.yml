@@ -23,6 +23,8 @@ jobs:
       - run: npm run check
       - run: npm run demo
         if: matrix.node == 20
+      - run: npm run demo:ablate
+        if: matrix.node == 20
       - run: npm run smoke:install
         if: matrix.node == 20
       - uses: actions/upload-artifact@v7

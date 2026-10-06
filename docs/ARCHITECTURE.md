@@ -61,14 +61,16 @@ The bridge step exists because agents load different files on their own. Claude 
 
 | Component | Responsibility | Important boundary |
 |---|---|---|
-| `src/cli.mjs` | `init`, `doctor`, `run`, and `report` commands | Converts user input into validated engine calls and stable exit codes |
+| `src/cli.mjs` | `init`, `doctor`, `run`, `ablate`, and `report` commands | Converts user input into validated engine calls and stable exit codes; refuses value flags without values |
 | `src/lib/config.mjs` | Discovery, starter config, structural and safety validation, per-variant agent resolution | Rejects malformed or unsafe experiments—including unknown variant keys—before paid agent runs |
-| `src/lib/engine.mjs` | Scheduling, worktree lifecycle, pairing, artifact assembly | Alternates variant order by attempt and invalidates infrastructure failures |
+| `src/lib/engine.mjs` | Run preparation, scheduling, worktree lifecycle, pairing, artifact assembly | Alternates arm order by attempt, optionally shuffles blocks by seed, and invalidates infrastructure failures |
+| `src/lib/sections.mjs` | Splitting an instruction file at one heading level; removing exactly one section | Pure text functions; byte-exact reconstruction |
+| `src/lib/ablation.mjs` | Ablation planning, budget, shared full arm, per-section effects | Reuses the engine's scheduler and trial executor—no second worktree lifecycle |
 | `src/lib/git.mjs` | Commit resolution, detached worktrees, variant application, delivery bridges, diff metrics | Refuses unsafe deletion and path/symlink escapes, including through an existing `CLAUDE.md` |
 | `src/lib/adapters.mjs` | Codex, Claude Code, custom-command, and mock execution; which instruction files each agent reads; runs that never started | Spawns argument arrays directly; no shell interpolation |
 | `src/lib/assertions.mjs` | Executable, filesystem, path, diff, and output checks | A task passes only when the agent and every assertion pass |
 | `src/lib/stats.mjs` | Summaries, Wilson intervals, paired exact test, treatment-delivery check, verdict | Exposes uncertainty instead of collapsing evidence into one opaque score; withholds confident labels when the treatment may not have arrived |
-| `src/lib/reporter.mjs` | Terminal, standalone HTML, and report regeneration | Escapes embedded data; reports remain portable files |
+| `src/lib/reporter.mjs` | Terminal, standalone HTML, and report regeneration for every report kind | Escapes embedded data; refuses unknown kinds and newer schema versions; reports remain portable files |
 | `src/action.mjs` | GitHub Action input/output adapter | Writes escaped multiline outputs and copies artifacts to the requested directory |
 
 ## Data model
@@ -116,6 +118,26 @@ Jobs are generated as `(task, attempt, variant)` tuples. Odd attempts schedule b
 
 Statistical pairing is by task name and attempt number—not by completion order. The exact paired test considers only disagreements: cases where one variant passes and the other fails.
 
+## Ablation runs
+
+`contexttest ablate` reuses the same machinery with more than two arms. The planner reads the chosen variant's instruction file through the same containment checks as `applyVariant`, splits it at one heading level, and builds one arm for the full file plus one arm per selected section with that section removed. Every arm is an inline-content variant, so instruction writes and any Claude Code bridge go through the usual path.
+
+```mermaid
+flowchart LR
+  F["Instruction file"] --> S["Split at level-N headings"]
+  S --> A0["Full file"]
+  S --> A1["Without §1"]
+  S --> A2["Without §2"]
+  A0 --> J["Scheduler: (task, attempt) blocks, order reversed on even attempts"]
+  A1 --> J
+  A2 --> J
+  J --> X["Same trial executor and worktree lifecycle"]
+  X --> E["Each section paired with the shared full arm"]
+  E --> R["Per-section effects + Holm-adjusted p + reports"]
+```
+
+Within a task and attempt, all arms run back to back; their order reverses on even attempts so every pair of arms is balanced. The full arm runs once per task and attempt and serves every comparison.
+
 ## Extension surfaces
 
 You can extend ContextTest without forking the runner:
@@ -124,9 +146,9 @@ You can extend ContextTest without forking the runner:
 - add task-specific assertions to encode a repository's definition of mergeable;
 - consume `report.json` from dashboards or CI policy;
 - import the public Node API from `@erickdronski/contexttest` for custom orchestration;
-- regenerate HTML from a stored JSON artifact with `contexttest report`.
+- regenerate HTML from any stored JSON report—experiment or ablation—with `contexttest report`.
 
-The public API exports configuration helpers, the experiment runner, both reporters, and the paired-statistics functions. The configuration schema is published at [`schema/contexttest.schema.json`](../schema/contexttest.schema.json).
+The public API exports configuration helpers, the experiment and ablation runners, the section splitter, the reporters, and the paired-statistics functions. The configuration schema is published at [`schema/contexttest.schema.json`](../schema/contexttest.schema.json).
 
 ## Repository layout
 
@@ -136,6 +158,7 @@ contexttest/
 ├── schema/                    machine-readable configuration schema
 ├── test/                      unit, integration, security, and documentation tests
 ├── examples/calculator/       deterministic zero-token demonstration
+├── examples/ablation/         deterministic section-ablation demonstration
 ├── docs/                      architecture, use cases, reports, and experiment playbook
 ├── scripts/                   lint, package smoke, and example-output tooling
 ├── action.yml                 GitHub Action contract

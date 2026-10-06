@@ -15,7 +15,7 @@ This prevents post-hoc storytelling. Name the primary outcome, guardrails, and w
 A useful treatment is attributable. Prefer:
 
 - one new rule;
-- one removed section;
+- one removed section (`contexttest ablate` runs one experiment per section, sharing the full-file arm);
 - one shorter rewrite of a specific section;
 - root-only versus root + nested rules;
 - an explicit example versus the same rule without an example.
@@ -101,7 +101,17 @@ Five pairs can provide directional evidence. More pairs may be needed when disag
 8. **Efficiency** — compare duration, tokens, cost, changed files, and diff lines after success.
 9. **Trial diagnostics** — explain failures; do not cherry-pick them into a different metric.
 
-## 8. Classify failures before changing instructions
+## 8. Ablate a file that already works
+
+Once a full instruction file reliably beats no instructions, `contexttest ablate` asks which of its sections are doing the work. Use it when:
+
+- the file has grown long enough that its context cost matters;
+- you suspect a section is redundant, outdated, or contradicts another;
+- you want to know which rules to keep when moving guidance into nested files.
+
+Start with `contexttest ablate --dry-run` to see the outline and budget: (sections + 1) × tasks × attempts runs. Choose tasks the sections govern—a testing section cannot show an effect on a documentation-only task. Delete a section only when its ablation reaches at least directional evidence of no harm across a representative task set, and remember that two sections which duplicate each other each look useless alone; ablate one, then re-run with it gone.
+
+## 9. Classify failures before changing instructions
 
 | Failure | Meaning | Response |
 |---|---|---|
@@ -113,7 +123,7 @@ Five pairs can provide directional evidence. More pairs may be needed when disag
 | impossible task at selected ref | neither variant has a fair path to success | redesign the task |
 | secret or private data in diagnostics | report is unsafe to share | rotate if necessary, redact source, rerun, inspect again |
 
-## 9. Use an experiment review checklist
+## 10. Use an experiment review checklist
 
 Before sharing or acting on a result, confirm:
 
@@ -129,7 +139,7 @@ Before sharing or acting on a result, confirm:
 - [ ] material conclusions were replicated;
 - [ ] the decision and caveats are recorded with the report.
 
-## 10. Keep experiments reviewable
+## 11. Keep experiments reviewable
 
 Commit the config, candidate instruction file, and repository-owned verification scripts. Keep raw reports private by default because diagnostics may contain code or paths. Share a sanitized report only when its contents have been inspected.
 

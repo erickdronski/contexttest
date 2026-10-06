@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderHtmlReport, renderTerminalReport } from '../src/lib/reporter.mjs';
+import { readFile } from 'node:fs/promises';
+import { renderHtmlReport, renderReport, renderReportTerminal, renderTerminalReport, reportKind } from '../src/lib/reporter.mjs';
 
 const summary = { attempts: 1, successes: 1, passRate: 1, passRateInterval: [0.2, 1], meanAssertionScore: 1, medianDurationMs: 1000, medianCostUsd: null, medianDiffLines: 2, medianChangedFiles: 1, medianInputTokens: 0, medianOutputTokens: 0 };
 const trial = { task: 'escape <this>', passed: true, durationMs: 1000, files: ['a.mjs'], diff: { total: 2 }, assertions: [{ pass: true, message: 'works' }], stderr: '', stdout: '' };
@@ -31,4 +32,21 @@ test('terminal report presents verdict and metrics', () => {
 test('HTML report supports task-specific refs without one shared commit', () => {
   const html = renderHtmlReport({ ...report, commit: null });
   assert.match(html, /multiple-refs/);
+});
+
+test('reports written by 0.2.0 still render, with their single agent on both arms', async () => {
+  const legacy = JSON.parse(await readFile(new URL('./fixtures/report-v0.2.0.json', import.meta.url), 'utf8'));
+  assert.equal(legacy.kind, undefined);
+  assert.equal(reportKind(legacy), 'experiment');
+  const html = renderReport(legacy);
+  assert.match(html, /<tr><th>Agent<\/th><td class="">mock<\/td><td class="">mock<\/td><\/tr>/);
+  assert.equal(html.includes('class="treatment"'), false, 'no treatment claim for a report that never recorded one');
+  assert.match(renderReportTerminal(legacy, { color: false }), /VERDICT  WITH-INSTRUCTIONS/);
+});
+
+test('refuses unknown report kinds and newer schema versions with a clear message', () => {
+  assert.throws(() => reportKind({ schemaVersion: 1, kind: 'leaderboard' }), /Unknown report kind "leaderboard"/);
+  assert.throws(() => reportKind({ schemaVersion: 2, kind: 'ablation' }), /uses schemaVersion 2; ContextTest .* reads up to 1/);
+  assert.throws(() => reportKind({ project: 'x' }), /not a ContextTest report/);
+  assert.throws(() => renderReport(null), /not a ContextTest report/);
 });

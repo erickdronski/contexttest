@@ -8,7 +8,8 @@
   <a href="docs/EXPERIMENT-PLAYBOOK.md">Experiment playbook</a> ·
   <a href="docs/REPORTS.md">Read the reports</a> ·
   <a href="docs/VERIFICATION.md">Verification</a> ·
-  <a href="examples/calculator/README.md">Live demonstration</a>
+  <a href="examples/calculator/README.md">Live demonstration</a> ·
+  <a href="examples/ablation/README.md">Ablation demo</a>
 </p>
 
 <h1 align="center">ContextTest</h1>
@@ -239,17 +240,38 @@ contexttest run --attempts 10            # override repetitions
 contexttest run --seed 42                # reproducible random task order
 contexttest run --keep-worktrees         # retain trial worktrees for debugging
 contexttest run --json                   # emit the report as one JSON line
+contexttest ablate                       # measure each instruction section's marginal effect
+contexttest ablate --dry-run             # print the section outline and run budget only
 contexttest doctor                       # verify config, refs, files, tools, and Git state
-contexttest report path/report.json      # regenerate the HTML report
+contexttest report path/report.json      # regenerate the HTML for any report kind
 ```
 
 Exit codes:
 
 | Code | Meaning |
 |---:|---|
-| `0` | Candidate leads or there is no clear winner |
+| `0` | Candidate leads or there is no clear winner; an ablation completed |
 | `1` | Configuration or infrastructure failure |
 | `2` | Baseline leads; useful as a CI regression gate |
+
+## Find out which sections earn their place
+
+A long instruction file costs context on every request, and nobody knows which parts pull their weight. `contexttest ablate` answers that directly: it splits the instruction file at Markdown headings and runs the full file against the file minus each section.
+
+```bash
+contexttest ablate --dry-run                       # print the outline and run budget only
+contexttest ablate --level 2 --attempts 5          # every level-2 section
+contexttest ablate --sections "Testing,Style"      # selected sections, by title or number
+contexttest ablate --variant with --seed 7         # ablate a specific variant, shuffled order
+```
+
+By default it ablates the variant that has instructions. Content before the first heading at the chosen level is a preamble kept in every arm; deeper headings stay inside their section, and headings inside fenced code blocks are ignored. Removing a section removes exactly its bytes—nothing else in the file changes.
+
+The full arm is shared: each ablation arm is paired with it by task and attempt, with the same alternated ordering as `run`, so a file with *k* sections costs (*k* + 1) × tasks × attempts runs instead of 2*k* × tasks × attempts for separate experiments. ContextTest prints that budget before any agent starts.
+
+For each section the report shows the change in success, assertion adherence, duration, diff size, and cost when the agent reports it (full file minus file without the section), an exact paired p-value, a Holm-adjusted p-value across sections, and the usual evidence labels computed from the adjusted value. A section **helps** or **hurts** only when success or adherence differs; duration and cost are shown as measurements, never verdicts, because a median over a few runs is too noisy to judge on. With few attempts, "no clear effect" means a section is untested, not useless. The report includes section headings but never section bodies.
+
+See the [ablation demonstration](examples/ablation/README.md) and its [committed report](examples/ablation/output/report.html).
 
 ## Compare agents and models
 
@@ -410,9 +432,9 @@ npm run demo
 
 Expected outcome: three baseline trials fail the repository behavior check, three candidate trials pass, and ContextTest produces a paired verdict plus JSON and HTML artifacts.
 
-The complete [calculator walkthrough](examples/calculator/README.md) maps the treatment, fixture, assertions, expected failure, and every output file. Its [committed HTML](examples/calculator/output/report.html) and [JSON](examples/calculator/output/report.json) let users inspect the result before running anything.
+The complete [calculator walkthrough](examples/calculator/README.md) maps the treatment, fixture, assertions, expected failure, and every output file. `npm run demo:ablate` runs the [ablation demonstration](examples/ablation/README.md): three instruction sections, of which only one changes the mock agent's behavior—and the report finds it. Its [committed HTML](examples/calculator/output/report.html) and [JSON](examples/calculator/output/report.json) let users inspect the result before running anything.
 
-The mock is only a product demonstration. It is clearly identified as such and must never be presented as evidence about a real model. Maintainers can regenerate the portable golden artifacts with `npm run demo:update`; tests require the committed HTML to match the JSON reporter byte for byte.
+The mock is only a product demonstration. It is clearly identified as such and must never be presented as evidence about a real model. Maintainers can regenerate every portable golden artifact with `npm run demo:update`; tests require each committed HTML file to match the JSON reporter byte for byte.
 
 ## Project status
 

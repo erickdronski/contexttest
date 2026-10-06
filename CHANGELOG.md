@@ -21,6 +21,10 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Reports record each variant's exact invocation (prompt and worktree as placeholders) and the agent CLI's `--version` output
 - Per-variant `agent` overrides for comparing providers or models on the same instructions; validated by the runtime validator and the JSON schema. Reports show each arm's agent and state whether the instructions, the agent, both, or neither differed, with a warning when both did
 - Unknown variant keys are rejected, so a misspelled override cannot silently produce an A/A comparison
+- `contexttest ablate`: splits an instruction file at a chosen Markdown heading level and measures each section's marginal effect—success, adherence, duration, diff size, and cost—against one shared full-file arm, with exact paired p-values, Holm-adjusted evidence labels, a printed run budget, `--dry-run`, `--sections`, and terminal, JSON, and HTML reports
+- A deterministic ablation example with committed golden output, `npm run demo:ablate`, and a clean-install smoke step
+- Every report records `kind`; `contexttest report` renders experiment and ablation reports, including reports written before 0.3.0, and refuses unknown kinds or newer schema versions
+- Comparisons record the `basis` of their verdict: success, adherence, or duration
 - Seeded randomized task order: `trials.seed`, `--seed`, or the Action's `seed` input shuffles task and attempt blocks reproducibly; reports record `experiment.order` and `experiment.seed`
 
 ## [0.2.0] - 2026-07-24

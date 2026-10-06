@@ -7,7 +7,7 @@ ContextTest is useful when a repository-instruction change creates a falsifiable
 | Question | Experimental treatment | Representative tasks | Evidence to collect |
 |---|---|---|---|
 | Does a new `AGENTS.md` help? | Current file versus candidate file | bug fix, test addition, constrained refactor | task success, assertion adherence, per-task regressions |
-| Is a long section earning its context cost? | Full file versus file with one section removed | tasks governed by that section | success, tokens, duration, diff size |
+| Is a long section earning its context cost? | `contexttest ablate`: the full file versus the file minus each section, sharing one full arm | tasks governed by those sections | per-section change in success, adherence, tokens, duration, diff size, and cost, with Holm-adjusted p-values |
 | Do nested instructions work? | root-only rules versus root + nested rules | changes inside the nested subtree | allowed paths, protected files, targeted tests |
 | Is an instruction too restrictive? | restrictive wording versus relaxed wording | tasks requiring legitimate cross-boundary edits | task success, forbidden-path failures, changed files |
 | Does a migration guide reduce mistakes? | no migration guidance versus concise checklist | repeated API or framework migrations | command tests, file-content checks, bounded diffs |
@@ -33,7 +33,7 @@ Choose a task where the code can work while still violating a local conventionâ€
 
 ### Instruction subtraction
 
-Remove one section rather than rewriting the whole file. If behavior does not change across a representative task set, the section may be redundant. If behavior regresses only on one task family, the task breakdown reveals where it earns its cost.
+Remove one section rather than rewriting the whole fileâ€”or let `contexttest ablate` remove each section in turn against one shared full-file arm. If behavior does not change across a representative task set, the section may be redundant. If behavior regresses only on one task family, the task breakdown reveals where it earns its cost. The [ablation demonstration](../examples/ablation/README.md) shows the report shape without spending tokens.
 
 ## What ContextTest can and cannot establish
 

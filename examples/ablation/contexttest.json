@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "project": "inventory-ablation-demo",
+  "baseRef": "HEAD",
+  "instructionFile": "AGENTS.md",
+  "agent": { "provider": "mock", "timeoutMinutes": 1 },
+  "trials": { "attempts": 3, "concurrency": 2 },
+  "environment": { "inherit": false },
+  "variants": [
+    { "name": "without-instructions", "disabled": true },
+    { "name": "with-instructions", "source": "AGENTS.candidate.md" }
+  ],
+  "tasks": [
+    {
+      "name": "remove-item",
+      "prompt": "Add a removeItem function that returns a copy of the list without the given item.",
+      "mock": { "command": ["node", "examples/ablation/mock-agent.mjs"] },
+      "assertions": [
+        { "type": "command", "command": ["node", "--test", "examples/ablation/fixture/verify.mjs"] },
+        { "type": "allowedPaths", "patterns": ["examples/ablation/fixture/**"] },
+        { "type": "maxChangedFiles", "value": 1 },
+        { "type": "maxDiffLines", "value": 20 }
+      ]
+    }
+  ]
+}

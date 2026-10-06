@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import os from 'node:os';
@@ -57,4 +57,41 @@ test('value flags without a value fail instead of silently becoming 1', async ()
   const outOfRange = await contexttest(root, 'run', '--seed', '-1');
   assert.equal(outOfRange.code, 1);
   assert.match(outOfRange.stderr, /trials.seed must be an integer/);
+});
+
+test('ablate --dry-run prints the plan and budget without creating anything', async () => {
+  const root = await repository();
+  const config = JSON.parse(await readFile(path.join(root, 'contexttest.json'), 'utf8'));
+  config.variants[1].content = '# Rules\n\n## One\n\nGOOD\n\n## Two\n\nnoise\n';
+  await writeFile(path.join(root, 'contexttest.json'), `${JSON.stringify(config, null, 2)}\n`);
+  const result = await contexttest(root, 'ablate', '--dry-run', '--attempts', '4');
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stdout, /Budget: 3 arms \(full \+ 2 without one section\) × 1 task\(s\) × 4 attempt\(s\) = 12 agent runs\./);
+  assert.match(result.stdout, /would take 16\./);
+  assert.match(result.stdout, /Dry run: no worktrees were created/);
+  await assert.rejects(() => access(path.join(root, '.contexttest')), 'nothing was written');
+  const json = await contexttest(root, 'ablate', '--dry-run', '--json', '--sections', 'two');
+  assert.deepEqual(JSON.parse(json.stdout).budget, { arms: 2, tasks: 1, attempts: 3, trials: 6, separateExperiments: 6 });
+  const unknown = await contexttest(root, 'ablate', '--dry-run', '--sections', 'three');
+  assert.equal(unknown.code, 1);
+  assert.match(unknown.stderr, /No level-2 section matches "three"/);
+});
+
+test('report regenerates HTML for old and new report kinds and refuses unknown ones', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'contexttest-report-'));
+  const legacy = path.join(directory, 'report.json');
+  await writeFile(legacy, await readFile(new URL('./fixtures/report-v0.2.0.json', import.meta.url)));
+  const rendered = await contexttest(directory, 'report', legacy);
+  assert.equal(rendered.code, 0, rendered.stderr);
+  assert.match(rendered.stdout, /\(experiment report\)/);
+  assert.match(await readFile(path.join(directory, 'report.html'), 'utf8'), /^<!doctype html>/);
+  const ablation = new URL('../examples/ablation/output/report.json', import.meta.url);
+  const output = path.join(directory, 'ablation.html');
+  const ablated = await contexttest(directory, 'report', fileURLToPath(ablation), '--output', output);
+  assert.equal(ablated.code, 0, ablated.stderr);
+  assert.equal(await readFile(output, 'utf8'), await readFile(new URL('../examples/ablation/output/report.html', import.meta.url), 'utf8'));
+  await writeFile(path.join(directory, 'future.json'), JSON.stringify({ schemaVersion: 9, kind: 'experiment' }));
+  const future = await contexttest(directory, 'report', 'future.json');
+  assert.equal(future.code, 1);
+  assert.match(future.stderr, /schemaVersion 9/);
 });
