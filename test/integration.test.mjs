@@ -5,7 +5,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import os from 'node:os';
 import path from 'node:path';
-import { runExperiment } from '../src/lib/engine.mjs';
+import { describeAgent, describeTreatment, runExperiment } from '../src/lib/engine.mjs';
+import { renderHtmlReport, renderTerminalReport } from '../src/lib/reporter.mjs';
 
 const exec = promisify(execFile);
 
@@ -70,4 +71,58 @@ test('refuses a symlinked state directory before creating worktrees', { skip: pr
     tasks: [{ name: 'task', prompt: 'prompt', mock: { command: [process.execPath, '-e', ''] } }],
   };
   await assert.rejects(() => runExperiment({ config, root }), /Refusing symlinked ContextTest state directory/);
+});
+
+test('compares two agents on the same instructions and says only the agent differed', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contexttest-cross-agent-'));
+  await git(root, 'init');
+  await writeFile(path.join(root, 'value.txt'), 'original\n');
+  await writeFile(path.join(root, 'rules.md'), 'MAKE_GOOD_CHANGE\n');
+  await writeFile(path.join(root, 'agent.mjs'), `
+    import { readFile, writeFile } from 'node:fs/promises';
+    const rules = await readFile('AGENTS.md', 'utf8');
+    const careful = process.argv[2] === 'careful';
+    await writeFile('value.txt', careful && rules.includes('MAKE_GOOD_CHANGE') ? 'expected\\n' : 'wrong\\n');
+  `);
+  await git(root, 'add', '.');
+  await git(root, 'commit', '-m', 'fixture');
+  const config = {
+    version: 1, project: 'cross-agent', agent: { provider: 'command', command: [process.execPath, 'agent.mjs', 'hasty'], timeoutMinutes: 1 },
+    trials: { attempts: 2, concurrency: 1 }, environment: { inherit: false },
+    variants: [
+      { name: 'hasty-agent', source: 'rules.md' },
+      { name: 'careful-agent', source: 'rules.md', agent: { command: [process.execPath, 'agent.mjs', 'careful'] } },
+    ],
+    tasks: [{ name: 'change', prompt: 'change the value', assertions: [{ type: 'fileContains', path: 'value.txt', value: 'expected' }] }],
+  };
+  const report = await runExperiment({ config, root });
+  assert.equal(report.comparison.winner, 'candidate');
+  assert.deepEqual(report.treatment.differs, ['agent']);
+  assert.deepEqual(report.treatment.agentSettings, ['command']);
+  assert.equal(report.treatment.summary, 'Only the agent differs (settings: command); both arms receive the same instructions.');
+  assert.notEqual(report.variants[0].agent.digest, report.variants[1].agent.digest);
+  assert.equal(report.variants[0].instructions.digest, report.variants[1].instructions.digest);
+  assert.equal(report.comparison.treatmentDelivery, 'unknown');
+  assert.match(report.comparison.deliveryCheck.reason, /different agents/);
+  assert.deepEqual(report.variants[1].invocation.args.slice(-2), ['agent.mjs', 'careful']);
+  const terminal = renderTerminalReport(report, { color: false });
+  assert.match(terminal, /Agent +command +command/);
+  assert.match(terminal, /Only the agent differs/);
+  assert.match(renderHtmlReport(report), /<p class="treatment">Only the agent differs/);
+  assert.deepEqual(report.warnings, []);
+});
+
+test('names both changes when instructions and agent differ, and recognizes an A/A comparison', () => {
+  const codex = { provider: 'codex', model: 'gpt-x' };
+  const claude = { provider: 'claude', model: 'opus', isolate: true };
+  const arm = (agent, digest) => ({ agent: describeAgent(agent), instructions: { digest } });
+  const confounded = describeTreatment(arm(codex, null), arm(claude, 'abc'), [codex, claude]);
+  assert.deepEqual(confounded.differs, ['instructions', 'agent']);
+  assert.equal(confounded.summary, 'Instructions and agent both differ (codex · gpt-x vs claude · opus); the result cannot be attributed to either one alone.');
+  assert.deepEqual(confounded.agentSettings, ['isolate', 'model', 'provider']);
+  const instructionsOnly = describeTreatment(arm(codex, null), arm(codex, 'abc'), [codex, codex]);
+  assert.equal(instructionsOnly.summary, 'Only the instructions differ; both arms use codex · gpt-x.');
+  const same = describeTreatment(arm(codex, 'abc'), arm(codex, 'abc'), [codex, codex]);
+  assert.deepEqual(same.differs, []);
+  assert.match(same.summary, /A\/A comparison/);
 });

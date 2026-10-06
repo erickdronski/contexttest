@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStarterConfig, validateConfig } from '../src/lib/config.mjs';
+import { createStarterConfig, resolveVariantAgent, validateConfig, variantAgents } from '../src/lib/config.mjs';
 
 test('starter configuration is valid', () => {
   assert.deepEqual(validateConfig(createStarterConfig()), []);
@@ -90,4 +90,46 @@ test('isolation is a boolean for providers that support it', () => {
   assert.match(validateConfig(config).join('\n'), /agent.isolate is supported only for the codex and claude providers/);
   config.agent = { provider: 'claude', isolate: true };
   assert.deepEqual(validateConfig(config), []);
+});
+
+test('a variant agent merges over the default agent unless it names another provider', () => {
+  const base = { provider: 'claude', executable: '/opt/claude', maxTurns: 30 };
+  assert.deepEqual(resolveVariantAgent(base, { model: 'opus' }), { provider: 'claude', executable: '/opt/claude', maxTurns: 30, model: 'opus' });
+  assert.deepEqual(resolveVariantAgent(base, { provider: 'codex', model: 'gpt' }), { provider: 'codex', model: 'gpt' }, 'no Claude executable leaks into Codex');
+  assert.deepEqual(resolveVariantAgent(base, { provider: 'claude', maxTurns: 5 }).executable, '/opt/claude');
+  const config = createStarterConfig();
+  config.variants = [{ name: 'codex', source: 'AGENTS.md' }, { name: 'claude', source: 'AGENTS.md', agent: { provider: 'claude', isolate: true } }];
+  assert.deepEqual(validateConfig(config), []);
+  assert.deepEqual(variantAgents(config).map((agent) => agent.provider), ['codex', 'claude']);
+});
+
+test('validates variant agents as strictly as the default agent', () => {
+  const config = createStarterConfig();
+  config.variants[0].agent = { provider: 'gemini' };
+  config.variants[1].agent = { provider: 'command', isolate: true, maxTurns: 0 };
+  const errors = validateConfig(config).join('\n');
+  assert.match(errors, /variants\[0\]\.agent\.provider must be codex, claude, command, or mock/);
+  assert.match(errors, /variants\[1\]\.agent\.command must be a non-empty string argument array/);
+  assert.match(errors, /variants\[1\]\.agent\.isolate is supported only/);
+  assert.match(errors, /variants\[1\]\.agent\.maxTurns must be an integer/);
+  config.variants[0] = { name: 'baseline', disabled: true, agent: 'claude' };
+  config.variants[1] = { name: 'candidate', source: 'AGENTS.md', agnet: { provider: 'claude' } };
+  const typos = validateConfig(config).join('\n');
+  assert.match(typos, /variants\[0\]\.agent must be an object/);
+  assert.match(typos, /Unknown property variants\[1\]\.agnet/, 'a typo must not silently turn a cross-agent run into an A/A test');
+});
+
+test('requires mock commands when any variant uses the mock agent', () => {
+  const config = createStarterConfig();
+  config.variants[1].agent = { provider: 'mock' };
+  assert.match(validateConfig(config).join('\n'), /tasks\[0\]\.mock\.command/);
+});
+
+test('the published schema and the runtime validator accept the same keys', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { TOP_LEVEL_KEYS, VARIANT_KEYS } = await import('../src/lib/config.mjs');
+  const schema = JSON.parse(await readFile(new URL('../schema/contexttest.schema.json', import.meta.url), 'utf8'));
+  assert.deepEqual(Object.keys(schema.properties).sort(), [...TOP_LEVEL_KEYS].sort());
+  assert.deepEqual(Object.keys(schema.properties.variants.items.properties).sort(), [...VARIANT_KEYS].sort());
+  assert.equal(schema.properties.variants.items.properties.agent.$ref, '#/$defs/agent');
 });

@@ -108,6 +108,12 @@
   "variants": [
     {
       "name": "without-instructions",
+      "agent": {
+        "provider": "mock",
+        "model": null,
+        "isolate": false,
+        "digest": "90890dd2a12129e8"
+      },
       "instructions": {
         "mode": "disabled",
         "bytes": 0,
@@ -341,6 +347,12 @@
     },
     {
       "name": "with-instructions",
+      "agent": {
+        "provider": "mock",
+        "model": null,
+        "isolate": false,
+        "digest": "90890dd2a12129e8"
+      },
       "instructions": {
         "mode": "source",
         "source": "AGENTS.candidate.md",
@@ -574,6 +586,13 @@
       }
     }
   ],
+  "treatment": {
+    "differs": [
+      "instructions"
+    ],
+    "agentSettings": [],
+    "summary": "Only the instructions differ; both arms use mock."
+  },
   "comparison": {
     "winner": "candidate",
     "reason": "100 percentage-point difference in task success.",

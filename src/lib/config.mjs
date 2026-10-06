@@ -2,6 +2,22 @@ import path from 'node:path';
 import { exists, readJson, slug } from './utils.mjs';
 
 export const CONFIG_NAMES = ['contexttest.json', '.contexttest.json'];
+export const TOP_LEVEL_KEYS = ['$schema', 'version', 'project', 'baseRef', 'instructionFile', 'agent', 'trials', 'setup', 'environment', 'variants', 'tasks'];
+export const VARIANT_KEYS = ['name', 'disabled', 'source', 'content', 'agent'];
+export const PROVIDERS = ['codex', 'claude', 'command', 'mock'];
+
+// A variant's agent is the top-level agent with the variant's overrides on
+// top. Naming a different provider replaces the agent outright, so settings
+// meant for one provider (an executable, a command) never leak into another.
+export function resolveVariantAgent(agent, override) {
+  if (!override) return agent;
+  if (override.provider && override.provider !== agent?.provider) return { ...override };
+  return { ...agent, ...override };
+}
+
+export function variantAgents(config) {
+  return config.variants.map((variant) => resolveVariantAgent(config.agent, variant.agent));
+}
 
 export function createStarterConfig() {
   return {
@@ -59,33 +75,56 @@ export function validateConfig(config) {
   };
   const duplicateValues = (items) => [...new Set(items.filter((value, index) => items.indexOf(value) !== index))];
   const assertionTypes = new Set(['command', 'maxChangedFiles', 'minChangedFiles', 'maxDiffLines', 'allowedPaths', 'forbiddenPaths', 'requiredFile', 'forbiddenFile', 'fileContains', 'stdoutContains', 'stdoutNotContains']);
-  const topLevel = new Set(['$schema', 'version', 'project', 'baseRef', 'instructionFile', 'agent', 'trials', 'setup', 'environment', 'variants', 'tasks']);
+  const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  // Field checks apply to whatever an agent object sets; the provider-specific
+  // requirements apply to the agent a trial will actually run.
+  const agentFieldErrors = (agent, prefix) => {
+    if (agent.provider !== undefined && !PROVIDERS.includes(agent.provider)) errors.push(`${prefix}.provider must be codex, claude, command, or mock.`);
+    if (agent.executable !== undefined && !nonEmpty(agent.executable)) errors.push(`${prefix}.executable must be a non-empty string.`);
+    if (agent.model !== undefined && !nonEmpty(agent.model)) errors.push(`${prefix}.model must be a non-empty string.`);
+    if (agent.ignoreUserConfig !== undefined && typeof agent.ignoreUserConfig !== 'boolean') errors.push(`${prefix}.ignoreUserConfig must be a boolean.`);
+    if (agent.isolate !== undefined && typeof agent.isolate !== 'boolean') errors.push(`${prefix}.isolate must be a boolean.`);
+    if (agent.timeoutMinutes !== undefined && !boundedNumber(agent.timeoutMinutes, 0, 1440)) errors.push(`${prefix}.timeoutMinutes must be greater than 0 and no more than 1440.`);
+    if (agent.maxTurns !== undefined && (!Number.isInteger(agent.maxTurns) || agent.maxTurns < 1 || agent.maxTurns > 1000)) errors.push(`${prefix}.maxTurns must be an integer from 1 to 1000.`);
+    if (agent.permissionMode !== undefined && !['default', 'acceptEdits', 'plan', 'bypassPermissions'].includes(agent.permissionMode)) errors.push(`${prefix}.permissionMode is not supported.`);
+    if (agent.allowedTools !== undefined && !stringArray(agent.allowedTools)) errors.push(`${prefix}.allowedTools must contain only non-empty strings.`);
+    if (agent.disallowedTools !== undefined && !stringArray(agent.disallowedTools)) errors.push(`${prefix}.disallowedTools must contain only non-empty strings.`);
+  };
+  const effectiveAgentErrors = (agent, prefix) => {
+    if (agent.provider === 'command' && !commandArray(agent.command)) errors.push(`${prefix}.command must be a non-empty string argument array for the command provider.`);
+    if (agent.isolate === true && !['codex', 'claude'].includes(agent.provider)) errors.push(`${prefix}.isolate is supported only for the codex and claude providers; isolate a custom agent inside its own command.`);
+  };
+  const topLevel = new Set(TOP_LEVEL_KEYS);
   for (const name of Object.keys(config)) if (!topLevel.has(name)) errors.push(`Unknown top-level property: ${name}.`);
   if (config.version !== 1) errors.push('version must be 1.');
   if (!nonEmpty(config.project)) errors.push('project must be a non-empty string.');
   if (config.baseRef !== undefined && !nonEmpty(config.baseRef)) errors.push('baseRef must be a non-empty string.');
   if (config.instructionFile !== undefined && !safeRelativePath(config.instructionFile)) errors.push('instructionFile must be a relative path inside the repository.');
-  if (!config.agent || typeof config.agent !== 'object' || Array.isArray(config.agent)) errors.push('agent must be an object.');
-  if (!config.agent?.provider || !['codex', 'claude', 'command', 'mock'].includes(config.agent.provider)) errors.push('agent.provider must be codex, claude, command, or mock.');
-  if (config.agent?.executable !== undefined && !nonEmpty(config.agent.executable)) errors.push('agent.executable must be a non-empty string.');
-  if (config.agent?.model !== undefined && !nonEmpty(config.agent.model)) errors.push('agent.model must be a non-empty string.');
-  if (config.agent?.ignoreUserConfig !== undefined && typeof config.agent.ignoreUserConfig !== 'boolean') errors.push('agent.ignoreUserConfig must be a boolean.');
-  if (config.agent?.isolate !== undefined && typeof config.agent.isolate !== 'boolean') errors.push('agent.isolate must be a boolean.');
-  if (config.agent?.isolate === true && !['codex', 'claude'].includes(config.agent.provider)) errors.push('agent.isolate is supported only for the codex and claude providers; isolate a custom agent inside its own command.');
-  if (config.agent?.provider === 'command' && !commandArray(config.agent.command)) errors.push('agent.command must be a non-empty string argument array for the command provider.');
-  if (config.agent?.timeoutMinutes !== undefined && !boundedNumber(config.agent.timeoutMinutes, 0, 1440)) errors.push('agent.timeoutMinutes must be greater than 0 and no more than 1440.');
-  if (config.agent?.maxTurns !== undefined && (!Number.isInteger(config.agent.maxTurns) || config.agent.maxTurns < 1 || config.agent.maxTurns > 1000)) errors.push('agent.maxTurns must be an integer from 1 to 1000.');
-  if (config.agent?.permissionMode !== undefined && !['default', 'acceptEdits', 'plan', 'bypassPermissions'].includes(config.agent.permissionMode)) errors.push('agent.permissionMode is not supported.');
-  if (config.agent?.allowedTools !== undefined && !stringArray(config.agent.allowedTools)) errors.push('agent.allowedTools must contain only non-empty strings.');
-  if (config.agent?.disallowedTools !== undefined && !stringArray(config.agent.disallowedTools)) errors.push('agent.disallowedTools must contain only non-empty strings.');
+  if (!isObject(config.agent)) errors.push('agent must be an object.');
+  if (!config.agent?.provider || !PROVIDERS.includes(config.agent.provider)) errors.push('agent.provider must be codex, claude, command, or mock.');
+  if (isObject(config.agent)) {
+    const { provider, ...fields } = config.agent;
+    agentFieldErrors(fields, 'agent');
+    if (PROVIDERS.includes(provider)) effectiveAgentErrors(config.agent, 'agent');
+  }
   if (!Array.isArray(config.variants) || config.variants.length !== 2) errors.push('variants must contain exactly two variants.');
   const variants = Array.isArray(config.variants) ? config.variants : [];
+  const variantKeys = new Set(VARIANT_KEYS);
+  const effectiveAgents = isObject(config.agent) ? [config.agent] : [];
   for (const [index, variant] of variants.entries()) {
     if (!variant || typeof variant !== 'object') { errors.push(`variants[${index}] must be an object.`); continue; }
+    for (const name of Object.keys(variant)) if (!variantKeys.has(name)) errors.push(`Unknown property variants[${index}].${name}.`);
     if (!nonEmpty(variant.name)) errors.push(`variants[${index}].name is required.`);
     const modes = [variant.disabled === true, typeof variant.source === 'string', typeof variant.content === 'string'].filter(Boolean).length;
     if (modes !== 1) errors.push(`variants[${index}] must set exactly one of disabled, source, or content.`);
     if (typeof variant.source === 'string' && !safeRelativePath(variant.source)) errors.push(`variants[${index}].source must be a relative path inside the project root.`);
+    if (variant.agent !== undefined) {
+      if (!isObject(variant.agent)) { errors.push(`variants[${index}].agent must be an object.`); continue; }
+      agentFieldErrors(variant.agent, `variants[${index}].agent`);
+      const effective = resolveVariantAgent(isObject(config.agent) ? config.agent : {}, variant.agent);
+      if (PROVIDERS.includes(effective.provider)) effectiveAgentErrors(effective, `variants[${index}].agent`);
+      effectiveAgents.push(effective);
+    }
   }
   const variantNames = variants.map((variant) => variant?.name).filter(nonEmpty);
   if (duplicateValues(variantNames).length) errors.push('variant names must be unique.');
@@ -98,7 +137,7 @@ export function validateConfig(config) {
     if (!nonEmpty(task.prompt)) errors.push(`tasks[${index}].prompt is required.`);
     if (task.ref !== undefined && !nonEmpty(task.ref)) errors.push(`tasks[${index}].ref must be a non-empty string.`);
     if (task.assertions && !Array.isArray(task.assertions)) errors.push(`tasks[${index}].assertions must be an array.`);
-    if (config.agent?.provider === 'mock' && !commandArray(task.mock?.command)) errors.push(`tasks[${index}].mock.command must be a non-empty string argument array for the mock provider.`);
+    if (effectiveAgents.some((agent) => agent.provider === 'mock') && !commandArray(task.mock?.command)) errors.push(`tasks[${index}].mock.command must be a non-empty string argument array for the mock provider.`);
     for (const [assertionIndex, assertion] of (Array.isArray(task.assertions) ? task.assertions : []).entries()) {
       const prefix = `tasks[${index}].assertions[${assertionIndex}]`;
       if (!assertion || typeof assertion !== 'object' || !assertionTypes.has(assertion.type)) {

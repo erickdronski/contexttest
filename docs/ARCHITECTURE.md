@@ -62,7 +62,7 @@ The bridge step exists because agents load different files on their own. Claude 
 | Component | Responsibility | Important boundary |
 |---|---|---|
 | `src/cli.mjs` | `init`, `doctor`, `run`, and `report` commands | Converts user input into validated engine calls and stable exit codes |
-| `src/lib/config.mjs` | Discovery, starter config, structural and safety validation | Rejects malformed or unsafe experiments before paid agent runs |
+| `src/lib/config.mjs` | Discovery, starter config, structural and safety validation, per-variant agent resolution | Rejects malformed or unsafe experiments—including unknown variant keys—before paid agent runs |
 | `src/lib/engine.mjs` | Scheduling, worktree lifecycle, pairing, artifact assembly | Alternates variant order by attempt and invalidates infrastructure failures |
 | `src/lib/git.mjs` | Commit resolution, detached worktrees, variant application, delivery bridges, diff metrics | Refuses unsafe deletion and path/symlink escapes, including through an existing `CLAUDE.md` |
 | `src/lib/adapters.mjs` | Codex, Claude Code, custom-command, and mock execution; which instruction files each agent reads; runs that never started | Spawns argument arrays directly; no shell interpolation |
@@ -76,7 +76,7 @@ The bridge step exists because agents load different files on their own. Claude 
 ```text
 Experiment
 ├── resolved task refs
-├── two instruction variants
+├── two variants: an instruction treatment plus the agent that receives it
 ├── one or more tasks
 │   ├── prompt (used at runtime, omitted from reports)
 │   └── deterministic assertions
@@ -84,7 +84,8 @@ Experiment
 │   ├── baseline trial
 │   └── candidate trial
 └── reports
-    ├── aggregate variant summaries
+    ├── aggregate variant summaries, each with its agent
+    ├── what differed between the arms: instructions, agent, both, or neither
     ├── task-level summaries
     ├── paired contingency table and exact p-value
     ├── treatment-delivery check from token usage

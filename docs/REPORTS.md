@@ -16,6 +16,7 @@ CONTEXTTEST / EXPERIMENT RESULT
 calculator-demo · calculator-demo-example
 
                            without-instructions   with-instructions
+Agent                      mock                   mock
 Task success               0%                     100%
 95% confidence interval    0%–56%                 44%–100%
 Assertion adherence        80%                    100%
@@ -26,6 +27,7 @@ Median cost                —                      —
 
 VERDICT  WITH-INSTRUCTIONS
 100 percentage-point difference in task success.
+Only the instructions differ; both arms use mock.
 Evidence: early; 3 paired run(s); exact p=0.250.
 ```
 
@@ -37,6 +39,7 @@ The top table answers the quickest questions:
 
 | Field | Interpretation |
 |---|---|
+| Agent | each arm's provider, model, and whether it ran isolated |
 | Task success | fraction of trials where the agent exited successfully and every assertion passed |
 | 95% confidence interval | Wilson interval around the observed pass rate |
 | Assertion adherence | mean fraction of individual assertions passed; useful for diagnosis, not the final gate |
@@ -50,6 +53,8 @@ The top table answers the quickest questions:
 A warning panel above the table appears whenever ContextTest has a reason to doubt the result—for example an instruction file the agent does not load on its own. Read it before the numbers.
 
 The verdict prioritizes a material task-success difference, then assertion adherence, then duration only when success is equal. It is a practical comparison rule, not a claim of universal superiority.
+
+Under the reason, the verdict states what differed between the arms, from the `treatment` record: only the instructions, only the agent (naming the providers and models, or the settings that changed), both, or neither. `treatment.differs` lists `instructions` and/or `agent`; `treatment.agentSettings` names every agent setting that differs. Two arms count as the same agent only when every setting matches—each variant's `agent.digest` covers them all. When both instructions and agent change, the report adds a warning: the result cannot be attributed to either one alone.
 
 ## Paired evidence
 

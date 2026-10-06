@@ -8,10 +8,10 @@ ContextTest evaluates other systems, so its own evidence path must be inspectabl
 |---|---|---|
 | provider contracts | [`test/adapters.test.mjs`](../test/adapters.test.mjs) | Codex/Claude/custom command construction, no bypass flags, isolation flags, portable invocation records, version capture, usage parsing, output redaction |
 | assertion engine | [`test/assertions.test.mjs`](../test/assertions.test.mjs) | every assertion family, unknown-type failure, safe diagnostics, symlink resistance |
-| configuration | [`test/config.test.mjs`](../test/config.test.mjs) | starter validity, bounds, duplicates, unsafe paths, provider-specific validation |
+| configuration | [`test/config.test.mjs`](../test/config.test.mjs) | starter validity, bounds, duplicates, unsafe paths, provider-specific validation, per-variant agent merge and replacement, unknown variant keys, schema-to-validator key alignment |
 | Git/worktrees | [`test/git.test.mjs`](../test/git.test.mjs) | rename and binary metrics, symlink defenses, serialized registry mutations under parallel trials |
 | path globs | [`test/glob.test.mjs`](../test/glob.test.mjs) | `*`, `**`, and `?` path semantics |
-| end-to-end engine | [`test/integration.test.mjs`](../test/integration.test.mjs) | real temporary repository, paired worktrees, setup baseline, assertions, artifacts, cleanup |
+| end-to-end engine | [`test/integration.test.mjs`](../test/integration.test.mjs) | real temporary repository, paired worktrees, setup baseline, assertions, artifacts, cleanup, cross-agent comparisons and their treatment wording |
 | treatment delivery | [`test/delivery.test.mjs`](../test/delivery.test.mjs) | a fake Claude Code that reads only `CLAUDE.md` receives `AGENTS.md` through the bridge in every arm; the bridge is excluded from metrics; existing `CLAUDE.md` rules are kept; unrecognized models and missing executables invalidate the experiment; `doctor` warns |
 | reporters | [`test/reporter.test.mjs`](../test/reporter.test.mjs) | standalone escaped HTML, terminal verdict, multi-ref task handling |
 | statistics | [`test/stats.test.mjs`](../test/stats.test.mjs) | medians, Wilson intervals, paired exact p-values, pairing keys, verdict rules, evidence labels, and the treatment-delivery check against a measured failure |

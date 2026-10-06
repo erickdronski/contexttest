@@ -178,6 +178,13 @@ export function interpolate(value, variables) {
   return String(value).replace(/\{([a-zA-Z][\w]*)\}/g, (_, name) => variables[name] ?? `{${name}}`);
 }
 
+// JSON with object keys sorted, so equal settings always serialize equally.
+export function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().filter((key) => value[key] !== undefined).map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  return JSON.stringify(value);
+}
+
 export function isPathInside(parent, child) {
   const relative = path.relative(path.resolve(parent), path.resolve(child));
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));

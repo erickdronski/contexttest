@@ -12,7 +12,9 @@ ContextTest is useful when a repository-instruction change creates a falsifiable
 | Is an instruction too restrictive? | restrictive wording versus relaxed wording | tasks requiring legitimate cross-boundary edits | task success, forbidden-path failures, changed files |
 | Does a migration guide reduce mistakes? | no migration guidance versus concise checklist | repeated API or framework migrations | command tests, file-content checks, bounded diffs |
 | Did an instruction edit regress CI behavior? | released instructions versus proposed instructions | a stable CI task portfolio | baseline-leads exit code and report artifact |
-| Do two agents need different guidance? | same two variants, separate provider runs | identical task set and refs | compare two independent ContextTest reports |
+| Does Codex respond differently from Claude Code? | same instructions in both variants, a per-variant `agent` override | identical task set and refs | task success, duration, tokens, and cost per agent; the report states that only the agent differed |
+| Does a newer model need the same guidance? | same instructions, variants that differ only by `agent.model` | tasks the guidance was written for | paired success and adherence per model |
+| Do two agents need different guidance? | the same instruction comparison, once per agent | identical task set and refs | compare the per-agent reports; a variant pair that changes both agent and instructions cannot separate the two |
 | Does a shorter file perform as well? | current instructions versus compressed candidate | representative repository tasks | non-inferior success with lower tokens or latency |
 
 ## Strong first experiments
@@ -39,7 +41,7 @@ Remove one section rather than rewriting the whole file. If behavior does not ch
 |---|---|
 | behavior on the configured tasks and commits | universal behavior across every repository or future model version |
 | deterministic pass/fail constraints | subjective code quality unless you encode it as a check |
-| changed files, diff size, duration, tokens, and reported cost | causal attribution when multiple treatment variables changed together |
+| changed files, diff size, duration, tokens, and reported cost | causal attribution when multiple treatment variables changed together—the report flags a variant pair that changes both agent and instructions |
 | paired pass/fail disagreements | statistical certainty from a tiny sample |
 | task-specific regressions | security isolation from an untrusted autonomous process |
 | reproducibility inputs recorded in the report | identical provider responses across time, accounts, caches, or network state |

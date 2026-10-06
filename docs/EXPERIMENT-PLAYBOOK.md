@@ -22,6 +22,10 @@ A useful treatment is attributable. Prefer:
 
 Avoid changing the model, task prompts, dependencies, agent permissions, and instruction file in the same experiment.
 
+Comparing agents is the mirror image: hold the instructions fixed and let a per-variant `agent` override change only the provider or model. The report states which of the two changed and warns when both did.
+
+Whatever the treatment, prefer `agent.isolate: true` so the experimenter's own plugins, hooks, and MCP servers do not ride along in every trial.
+
 ## 3. Build a representative task portfolio
 
 Choose three to ten recurring jobs, not ten variations of the same easy edit.
@@ -112,7 +116,7 @@ Five pairs can provide directional evidence. More pairs may be needed when disag
 Before sharing or acting on a result, confirm:
 
 - [ ] one instruction idea changed;
-- [ ] both variants used the same prompt, task ref, setup, agent, and permissions;
+- [ ] both variants used the same prompt, task ref, setup, agent, and permissions—or the report says that only the agent differed, by design;
 - [ ] tasks represent recurring repository work;
 - [ ] assertions are deterministic and approximate mergeability;
 - [ ] no infrastructure failures occurred;

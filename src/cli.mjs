@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { createStarterConfig, loadConfig } from './lib/config.mjs';
+import { createStarterConfig, loadConfig, variantAgents } from './lib/config.mjs';
 import { runExperiment } from './lib/engine.mjs';
 import { deliveryFor, deliveryWarning, ISOLATION_FLAGS } from './lib/adapters.mjs';
 import { assertGitRepository, currentCommit, pathExistsAtRef } from './lib/git.mjs';
 import { renderHtmlReport, renderTerminalReport } from './lib/reporter.mjs';
-import { exists, findExecutable, isPathInside, parseArgs, runProcess, VERSION, writeJson } from './lib/utils.mjs';
+import { exists, findExecutable, isPathInside, parseArgs, runProcess, stableStringify, VERSION, writeJson } from './lib/utils.mjs';
 
 const HELP = `
 ContextTest — A/B testing for coding-agent instructions
@@ -78,6 +78,8 @@ async function doctor(flags) {
   let loaded;
   try { loaded = await loadConfig(process.cwd(), flags.config); checks.push({ name: 'configuration', pass: true, detail: loaded.configPath }); }
   catch (error) { checks.push({ name: 'configuration', pass: false, detail: error.message }); }
+  // One entry per distinct agent: variants may override the top-level agent.
+  const agents = loaded ? [...new Map(variantAgents(loaded.config).map((agent) => [stableStringify(agent), agent])).values()] : [];
   if (loaded) {
     let repository;
     try { repository = await assertGitRepository(loaded.root); checks.push({ name: 'repository', pass: true, detail: repository }); }
@@ -92,19 +94,22 @@ async function doctor(flags) {
         } catch { checks.push({ name: `ref:${task.name}`, pass: false, detail: `cannot resolve ${task.ref ?? loaded.config.baseRef ?? 'HEAD'}` }); }
       }
     }
-    const delivery = deliveryFor(loaded.config.agent.provider, loaded.config.instructionFile ?? 'AGENTS.md');
-    if (delivery.method === 'native') checks.push({ name: 'delivery', pass: true, detail: `${delivery.file} is loaded natively by ${loaded.config.agent.provider}` });
-    if (delivery.method === 'unverified') checks.push({ name: 'delivery', pass: true, warn: true, detail: deliveryWarning(loaded.config.agent.provider, delivery) });
-    if (delivery.method === 'bridged') {
-      checks.push({ name: 'delivery', pass: true, warn: true, detail: `Claude Code does not read ${delivery.file}; every arm gets ${delivery.bridgedVia} so the treatment reaches it` });
-      const refs = [...new Set(loaded.config.tasks.map((task) => task.ref ?? loaded.config.baseRef ?? 'HEAD'))];
-      if (repository) for (const ref of refs) {
-        if (await pathExistsAtRef(repository, ref, delivery.bridge)) checks.push({ name: 'delivery', pass: true, warn: true, detail: `${ref} already has ${delivery.bridge}: its rules reach every arm, including the one without instructions, and ContextTest adds the import to it` });
+    for (const provider of [...new Set(agents.map((agent) => agent.provider))]) {
+      const delivery = deliveryFor(provider, loaded.config.instructionFile ?? 'AGENTS.md');
+      if (delivery.method === 'native') checks.push({ name: 'delivery', pass: true, detail: `${delivery.file} is loaded natively by ${provider}` });
+      if (delivery.method === 'unverified') checks.push({ name: 'delivery', pass: true, warn: true, detail: deliveryWarning(provider, delivery) });
+      if (delivery.method === 'bridged') {
+        checks.push({ name: 'delivery', pass: true, warn: true, detail: `Claude Code does not read ${delivery.file}; every arm gets ${delivery.bridgedVia} so the treatment reaches it` });
+        const refs = [...new Set(loaded.config.tasks.map((task) => task.ref ?? loaded.config.baseRef ?? 'HEAD'))];
+        if (repository) for (const ref of refs) {
+          if (await pathExistsAtRef(repository, ref, delivery.bridge)) checks.push({ name: 'delivery', pass: true, warn: true, detail: `${ref} already has ${delivery.bridge}: its rules reach every arm, including the one without instructions, and ContextTest adds the import to it` });
+        }
       }
     }
-    const { provider, isolate } = loaded.config.agent;
-    if (ISOLATION_FLAGS[provider] && isolate) checks.push({ name: 'isolation', pass: true, detail: `trials run with ${ISOLATION_FLAGS[provider].join(' ')}` });
-    if (ISOLATION_FLAGS[provider] && !isolate) checks.push({ name: 'isolation', pass: true, warn: true, detail: provider === 'claude' ? 'your user settings, plugins, hooks, and MCP servers load into every trial; set agent.isolate: true' : 'your ~/.codex/config.toml (profiles, MCP servers) applies to every trial; set agent.isolate: true' });
+    for (const { provider, isolate } of agents) {
+      if (ISOLATION_FLAGS[provider] && isolate) checks.push({ name: 'isolation', pass: true, detail: `${provider} trials run with ${ISOLATION_FLAGS[provider].join(' ')}` });
+      if (ISOLATION_FLAGS[provider] && !isolate) checks.push({ name: 'isolation', pass: true, warn: true, detail: provider === 'claude' ? 'your user settings, plugins, hooks, and MCP servers load into every trial; set agent.isolate: true' : 'your ~/.codex/config.toml (profiles, MCP servers) applies to every trial; set agent.isolate: true' });
+    }
     for (const variant of loaded.config.variants.filter((item) => item.source)) {
       const source = path.resolve(loaded.root, variant.source);
       const pass = isPathInside(loaded.root, source) && await exists(source);
@@ -115,10 +120,9 @@ async function doctor(flags) {
       checks.push({ name: `setup:${command[0]}`, pass: Boolean(executable), detail: executable ?? 'not found on PATH' });
     }
   }
-  if (loaded?.config.agent.provider === 'codex') await checkExecutable(loaded.config.agent.executable ?? 'codex');
-  if (loaded?.config.agent.provider === 'claude') await checkExecutable(loaded.config.agent.executable ?? 'claude');
-  if (loaded?.config.agent.provider === 'command') await checkExecutable(loaded.config.agent.command[0]);
-  if (loaded?.config.agent.provider === 'mock') for (const task of loaded.config.tasks) {
+  const executables = new Set(agents.filter((agent) => agent.provider !== 'mock').map((agent) => agent.provider === 'command' ? agent.command[0] : agent.executable ?? agent.provider));
+  for (const executable of executables) await checkExecutable(executable);
+  if (agents.some((agent) => agent.provider === 'mock')) for (const task of loaded.config.tasks) {
     const executable = await findExecutable(task.mock.command[0]);
     checks.push({ name: `mock:${task.name}`, pass: Boolean(executable), detail: executable ?? `${task.mock.command[0]} not found on PATH` });
   }

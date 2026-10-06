@@ -18,6 +18,8 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Per-variant `instructions` metadata (mode, bytes, SHA-256 digest) and total input tokens, including cache reads and writes, in trial usage
 - `agent.isolate`: Claude Code trials run with `--strict-mcp-config --setting-sources project,local`, Codex trials with `--ignore-user-config`, so the experimenter's plugins, hooks, MCP servers, and user settings stay out of the experiment; `doctor` warns when it is off
 - Reports record each variant's exact invocation (prompt and worktree as placeholders) and the agent CLI's `--version` output
+- Per-variant `agent` overrides for comparing providers or models on the same instructions; validated by the runtime validator and the JSON schema. Reports show each arm's agent and state whether the instructions, the agent, both, or neither differed, with a warning when both did
+- Unknown variant keys are rejected, so a misspelled override cannot silently produce an A/A comparison
 
 ## [0.2.0] - 2026-07-24
 

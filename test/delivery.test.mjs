@@ -145,3 +145,20 @@ test('doctor warns that Claude Code needs a bridge and that a base CLAUDE.md rea
   assert.match(stdout, /! isolation +your user settings, plugins, hooks, and MCP servers load into every trial/);
   assert.equal(await readFile(path.join(root, 'CLAUDE.md'), 'utf8'), '# Shared rules\n', 'doctor never edits the repository');
 });
+
+test('a cross-provider run bridges only the Claude arm and warns that two things changed', { skip }, async () => {
+  const root = await repository();
+  await writeFile(path.join(root, 'agent.mjs'), "import { writeFileSync } from 'node:fs'; writeFileSync('value.txt', 'expected\\n');\n");
+  await git(root, 'add', '.');
+  await git(root, 'commit', '-m', 'command agent');
+  const config = claudeConfig(await fakeClaude());
+  config.variants[1].agent = { provider: 'command', command: [process.execPath, 'agent.mjs'] };
+  const report = await runExperiment({ config, root });
+  assert.equal(report.variants[0].delivery.method, 'bridged');
+  assert.equal(report.variants[1].delivery.method, 'unknown');
+  assert.equal(report.variants[0].trials[0].bridge, 'created');
+  assert.equal(report.variants[1].trials[0].bridge, undefined);
+  assert.deepEqual(report.runtime.agents.map((agent) => [agent.provider, agent.version]), [['claude', '9.9.9 (Fake Claude Code)'], ['command', null]]);
+  assert.match(report.treatment.summary, /^Instructions and agent both differ \(claude vs command\)/);
+  assert.equal(report.warnings.find((warning) => warning.code === 'confounded').message, report.treatment.summary);
+});

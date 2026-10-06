@@ -40,8 +40,9 @@ ContextTest replaces that with an experiment. It gives Codex or Claude Code the 
 
 ```text
                          without        with
+Agent                    codex          codex
 Task success             33%            100%
-95% confidence interval  8%–73%         57%–100%
+95% confidence interval  10%–70%        61%–100%
 Assertion adherence      58%            100%
 Median duration          6m 42s         4m 18s
 Median changed files     9              4
@@ -49,7 +50,8 @@ Median diff lines        184            71
 
 VERDICT  WITH LEADS
 67 percentage-point difference in task success.
-Evidence: directional; 5 paired runs; exact p=0.125.
+Only the instructions differ; both arms use codex.
+Evidence: directional; 6 paired runs; exact p=0.125.
 ```
 
 ## Why this exists
@@ -247,6 +249,22 @@ Exit codes:
 | `0` | Candidate leads or there is no clear winner |
 | `1` | Configuration or infrastructure failure |
 | `2` | Baseline leads; useful as a CI regression gate |
+
+## Compare agents and models
+
+Variants can override the agent. To ask whether Codex and Claude Code respond differently to the same file, give both variants the same instructions and change only the agent:
+
+```json
+"agent": { "provider": "codex", "isolate": true, "timeoutMinutes": 20 },
+"variants": [
+  { "name": "codex", "source": "AGENTS.md" },
+  { "name": "claude", "source": "AGENTS.md", "agent": { "provider": "claude", "isolate": true } }
+]
+```
+
+A variant's `agent` is merged over the top-level agent—`{ "model": "opus" }` changes only the model. Naming a different provider replaces the agent instead, so an executable or command meant for one provider never leaks into another. The validator and schema apply the same rules to variant agents as to the top-level one, and reject unknown variant keys so a typo cannot silently turn the experiment into an A/A test.
+
+Every report shows each arm's agent and states what differed: only the instructions, only the agent (with the providers, models, or setting names that changed), both—which cannot be attributed to either and is flagged as a warning—or nothing at all, an A/A comparison that measures run-to-run noise. Agent-only comparisons skip the token-usage delivery check, because different agents have different prompt overhead. Each agent's `--version` output is recorded, and Claude Code arms still receive `AGENTS.md` through their `CLAUDE.md` bridge.
 
 ## Assertions
 
