@@ -8,7 +8,7 @@ ContextTest should earn trust through reproducibility, restraint, and clear evid
 2. For substantial behavior or configuration changes, open an issue describing the use case first.
 3. Keep the change focused. Avoid combining refactors with new behavior.
 4. Add tests that fail without the change.
-5. Run `npm run check`, `npm run demo`, and `npm run smoke:install`.
+5. Run `npm run check`, `npm run demo`, and `npm run smoke:install`; run `npm run demo:update` when report output changes.
 6. Update the README, schema, and changelog for user-visible changes.
 
 ## Local setup

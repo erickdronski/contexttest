@@ -13,6 +13,7 @@ ContextTest measures whether repository instructions improve coding-agent outcom
 - Never enable agent permission bypasses by default.
 - Keep reports standalone and free of external network dependencies.
 - Add or update tests for behavior changes.
+- Keep the record of which instruction files each agent loads (`src/lib/adapters.mjs`) in step with the README; a treatment the agent never reads makes every result noise.
 
 ## Verification
 
@@ -21,9 +22,11 @@ Run from the repository root:
 ```bash
 npm run check
 npm run demo
+npm run demo:ablate
+npm run demo:aggregate
 ```
 
-Inspect the generated demo HTML at `.contexttest/reports/<run>/report.html` when changing report markup or styles.
+Inspect the generated HTML under `.contexttest/` when changing report markup or styles, and run `npm run demo:update` to regenerate the committed example reports.
 
 ## Documentation
 

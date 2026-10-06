@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "kind": "ablation",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runId": "inventory-ablation-example",
   "generatedAt": "2026-07-24T00:00:00.000Z",
   "project": "inventory-ablation-demo",

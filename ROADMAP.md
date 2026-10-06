@@ -10,6 +10,7 @@ ContextTest follows evidence, not feature volume.
 - [x] Repeated trials, Wilson intervals, and cautious verdicts
 - [x] Standalone HTML and versioned JSON reports
 - [x] GitHub Action and safe environment defaults
+- [x] Paired task ordering with alternated variant order
 
 ## 0.2 — measurement hardening
 
@@ -19,15 +20,21 @@ ContextTest follows evidence, not feature volume.
 - [x] Clean-install tarball smoke test
 - [x] Reproducibility metadata and resolved task commits
 
+## 0.3 — sharper questions
+
+- [x] Treatment delivery to Claude Code and a passive delivery check
+- [x] Isolation from the experimenter's own agent setup
+- [x] Seeded randomized task order
+- [x] Instruction-section ablation experiments
+- [x] Comparison across agent providers and models
+- [x] Schema-versioned report aggregation across commits
+
 ## Next
 
-- [x] Paired task ordering with alternated variant order
-- [ ] Seeded randomized task order
-- [ ] Instruction-section ablation experiments
 - [ ] Historical task harvesting from issues and fixing commits
 - [ ] Container executor with network policy
-- [ ] Comparison across agent providers and models
-- [ ] Schema-versioned report aggregation across commits
+- [ ] Aggregation of ablation reports
+- [ ] Canary checks that each supported agent still loads its instruction file
 
 ## Explicit non-goals
 

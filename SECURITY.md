@@ -37,4 +37,6 @@ Avoid passing production credentials to experiments. Prefer short-lived, least-p
 
 ContextTest redacts recognized token formats and values stored in secret-named environment variables from agent and assertion diagnostics. Redaction is defense in depth: inspect generated reports before sharing them, and never use a report as a secret-storage boundary.
 
-Generated state directories and configured file paths are checked for containment and unsafe symlink traversal before ContextTest reads, writes, or removes them. Treat any containment error as a configuration or repository-integrity problem; do not work around it with a broader path.
+Generated state directories and configured file paths are checked for containment and unsafe symlink traversal before ContextTest reads, writes, or removes them. The same checks guard the `CLAUDE.md` bridge written into Claude Code trial worktrees: a `CLAUDE.md` that links anywhere other than the instruction file is refused rather than written through. `contexttest aggregate` writes under `.contexttest/aggregates` by default and refuses to write into a directory that holds one of its source reports.
+
+`agent.isolate` keeps user-level agent plugins, hooks, settings, and MCP servers out of trials. It reduces accidental exposure; it is not a sandbox. Treat any containment error as a configuration or repository-integrity problem; do not work around it with a broader path.

@@ -64,6 +64,7 @@ Linters can tell you whether an instruction file is well formed. ContextTest tel
 
 Use it to answer:
 
+- Is the agent even reading our instruction file?
 - Does our new `AGENTS.md` improve task completion?
 - Is a long section useful or merely consuming context?
 - Does Codex respond differently from Claude Code?
@@ -110,7 +111,7 @@ The [architecture guide](docs/ARCHITECTURE.md) maps every component, lifecycle t
 
 ## Tested as an evaluator should be
 
-The public suite covers provider contracts, all assertion families, statistics, report escaping, configuration rejection, secret handling, timeout cleanup, symlink boundaries, concurrent worktree lifecycle, documentation links, golden-report regeneration, clean tarball installation, and the GitHub Action entrypoint.
+The public suite covers provider contracts, treatment delivery to agents that read different instruction files, all assertion families, statistics, section ablation, report aggregation, report escaping, configuration rejection, secret handling, timeout cleanup, symlink boundaries, concurrent worktree lifecycle, documentation links, golden-report regeneration, clean tarball installation, and the GitHub Action entrypoint.
 
 CI runs the check and installation smoke test on Node 20, 22, and 24, plus an Action-specific end-to-end job. See the [verification and test map](docs/VERIFICATION.md) for the claim-to-test index, exact commands, release gates, and honest limits.
 
@@ -454,7 +455,7 @@ The mock is only a product demonstration. It is clearly identified as such and m
 
 ## Project status
 
-ContextTest is an early public release. Its report schema is versioned; the configuration format may gain additive fields before `1.0`. Current priorities are documented in [ROADMAP.md](ROADMAP.md).
+ContextTest is an early public release. Every report records its kind and schema version; the configuration format may gain additive fields before `1.0`. Current priorities are documented in [ROADMAP.md](ROADMAP.md).
 
 If this solves a real problem for you, run an experiment and share the anonymized result—not just a star. Reproducible examples are the fastest way to make this project trustworthy.
 

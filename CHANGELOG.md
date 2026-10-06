@@ -4,29 +4,28 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
-### Fixed
-
-- Claude Code experiments with the default `instructionFile: "AGENTS.md"` never delivered the treatment, because Claude Code reads `CLAUDE.md`; both arms were identical. Every Claude Code arm now gets the same `CLAUDE.md` containing `@AGENTS.md`, recorded per variant as `delivery`, excluded from agent metrics, and refused when `CLAUDE.md` links outside the treatment
-- An unrecognized Claude model, a Claude Code exit before its first turn, or a missing agent executable now invalidates the experiment instead of being scored as agent failure
-- Claude Code usage is parsed even when diagnostics precede the JSON result, and its turn count is recorded
-- `--attempts` crashed on a configuration without a `trials` object, and a value flag given without a value silently became `1`
+## [0.3.0] — 2026-10-06
 
 ### Added
 
-- `contexttest doctor` reports how each agent receives the instruction file and warns when a base-ref `CLAUDE.md` reaches every arm
-- A report warning panel for instruction files the agent does not load on its own
-- A passive treatment-delivery check: each comparison estimates the treatment's size in tokens, compares it with the observed per-request input difference, and labels the evidence `doubtful`—with a prominent warning—when the treatment probably never reached the agent
-- Per-variant `instructions` metadata (mode, bytes, SHA-256 digest) and total input tokens, including cache reads and writes, in trial usage
-- `agent.isolate`: Claude Code trials run with `--strict-mcp-config --setting-sources project,local`, Codex trials with `--ignore-user-config`, so the experimenter's plugins, hooks, MCP servers, and user settings stay out of the experiment; `doctor` warns when it is off
-- Reports record each variant's exact invocation (prompt and worktree as placeholders) and the agent CLI's `--version` output
-- Per-variant `agent` overrides for comparing providers or models on the same instructions; validated by the runtime validator and the JSON schema. Reports show each arm's agent and state whether the instructions, the agent, both, or neither differed, with a warning when both did
-- Unknown variant keys are rejected, so a misspelled override cannot silently produce an A/A comparison
-- `contexttest ablate`: splits an instruction file at a chosen Markdown heading level and measures each section's marginal effect—success, adherence, duration, diff size, and cost—against one shared full-file arm, with exact paired p-values, Holm-adjusted evidence labels, a printed run budget, `--dry-run`, `--sections`, and terminal, JSON, and HTML reports
-- A deterministic ablation example with committed golden output, `npm run demo:ablate`, and a clean-install smoke step
-- Every report records `kind`; `contexttest report` renders experiment and ablation reports, including reports written before 0.3.0, and refuses unknown kinds or newer schema versions
-- Comparisons record the `basis` of their verdict: success, adherence, or duration
-- `contexttest aggregate`: pools compatible experiment reports into paired statistics per task and overall, keeps pairs inside their own run, analyzes every source run on its own, and summarizes disagreement between runs. It refuses mismatched variants, variant order, or task sets and repeated runs, and warns about and records differences in configuration, agents, instruction digests, task refs, project, or version. Terminal, JSON (`kind: "aggregate"`), and HTML output, a committed example, `npm run demo:aggregate`, and a clean-install smoke step
-- Seeded randomized task order: `trials.seed`, `--seed`, or the Action's `seed` input shuffles task and attempt blocks reproducibly; reports record `experiment.order` and `experiment.seed`
+- `contexttest ablate`: each instruction section's marginal effect against one shared full-file arm, with a printed run budget, `--dry-run`, `--sections`, `--level`, and Holm-adjusted evidence labels
+- `contexttest aggregate`: pooled paired statistics across compatible experiment reports, with pairs kept inside their own run, a per-run breakdown, and a heterogeneity summary
+- Per-variant `agent` overrides for comparing providers or models on the same instructions, and verdicts that state whether the instructions, the agent, both, or neither differed
+- Passive treatment-delivery check from token usage; doubtful delivery withholds every confident evidence label and adds a prominent warning
+- `agent.isolate`, keeping user-level plugins, hooks, settings, and MCP servers out of Claude Code and Codex trials
+- Seeded randomized task order through `trials.seed`, `--seed`, or the Action's `seed` input
+- Report `kind`, plus per-variant agent, instruction size and digest, delivery method, invocation, and agent CLI version
+- `contexttest report` for every report kind, including reports written before 0.3.0
+- Doctor checks for instruction delivery, base-ref `CLAUDE.md` files, and isolation
+- Deterministic ablation and aggregation examples with committed golden output, `npm run demo:ablate`, `npm run demo:aggregate`, and clean-install smoke steps
+
+### Fixed
+
+- Deliver `AGENTS.md` treatments to Claude Code, which reads `CLAUDE.md`: every Claude Code arm now gets the same `CLAUDE.md` import, excluded from agent metrics. Earlier Claude Code experiments with the default instruction file compared identical arms
+- Invalidate experiments whose agent never started—an unrecognized Claude model, a Claude Code exit before its first turn, or a missing executable—instead of scoring them as agent failures
+- Parse Claude Code usage when diagnostics precede the JSON result, and count cache reads and writes toward total input
+- Reject unknown variant and trial keys, so a misspelled override cannot silently produce an A/A comparison
+- Stop `--attempts` from crashing on a configuration without `trials`, and reject value flags given without a value instead of treating them as `1`
 
 ## [0.2.0] - 2026-07-24
 

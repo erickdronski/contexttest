@@ -1,6 +1,6 @@
 {
   "name": "@erickdronski/contexttest",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A/B testing for AGENTS.md and coding-agent instructions.",
   "type": "module",
   "bin": {
