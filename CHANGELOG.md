@@ -4,6 +4,11 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Fixed
+
+- Close a channel between trials: Claude Code keys auto-memory by repository, and every trial worktree belongs to the same repository, so all trials shared one memory directory. Isolated Claude Code trials now run with `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`, added after the configured environment so it holds with `environment.inherit` true or false, and recorded in each variant's `invocation.env`
+- `contexttest doctor` names the shared auto-memory directory when a Claude Code experiment is not isolated, and lists the isolation variable when it is
+
 ## [0.3.0] — 2026-10-06
 
 ### Added

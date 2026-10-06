@@ -3,7 +3,7 @@ import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createStarterConfig, loadConfig, variantAgents } from './lib/config.mjs';
 import { runExperiment } from './lib/engine.mjs';
-import { deliveryFor, deliveryWarning, ISOLATION_FLAGS } from './lib/adapters.mjs';
+import { deliveryFor, deliveryWarning, ISOLATION_ENV, ISOLATION_FLAGS } from './lib/adapters.mjs';
 import { assertGitRepository, currentCommit, pathExistsAtRef } from './lib/git.mjs';
 import { planAblation, runAblation } from './lib/ablation.mjs';
 import { aggregateReports, loadReports, writeAggregate } from './lib/aggregate.mjs';
@@ -172,8 +172,9 @@ async function doctor(flags) {
       }
     }
     for (const { provider, isolate } of agents) {
-      if (ISOLATION_FLAGS[provider] && isolate) checks.push({ name: 'isolation', pass: true, detail: `${provider} trials run with ${ISOLATION_FLAGS[provider].join(' ')}` });
-      if (ISOLATION_FLAGS[provider] && !isolate) checks.push({ name: 'isolation', pass: true, warn: true, detail: provider === 'claude' ? 'your user settings, plugins, hooks, and MCP servers load into every trial; set agent.isolate: true' : 'your ~/.codex/config.toml (profiles, MCP servers) applies to every trial; set agent.isolate: true' });
+      const variables = Object.entries(ISOLATION_ENV[provider] ?? {}).map(([name, value]) => `${name}=${value}`);
+      if (ISOLATION_FLAGS[provider] && isolate) checks.push({ name: 'isolation', pass: true, detail: `${provider} trials run with ${[...ISOLATION_FLAGS[provider], ...variables].join(' ')}` });
+      if (ISOLATION_FLAGS[provider] && !isolate) checks.push({ name: 'isolation', pass: true, warn: true, detail: provider === 'claude' ? 'your user settings, plugins, hooks, and MCP servers load into every trial, and all trials share one auto-memory directory; set agent.isolate: true' : 'your ~/.codex/config.toml (profiles, MCP servers) applies to every trial; set agent.isolate: true' });
     }
     for (const variant of loaded.config.variants.filter((item) => item.source)) {
       const source = path.resolve(loaded.root, variant.source);

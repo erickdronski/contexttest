@@ -42,7 +42,7 @@ writeFileSync('value.txt', memory.includes('MAKE_GOOD_CHANGE') ? 'expected\n' : 
 const dangling = imports.filter((entry) => !entry.exists).map((entry) => entry.target);
 const turns = 3 + (dangling.length ? 1 : 0);
 const perRequest = 20000 + Math.round(Buffer.byteLength(memory) / 4);
-process.stdout.write(JSON.stringify({ type: 'result', num_turns: turns, total_cost_usd: 0.01, imports, result: dangling.length ? 'Note: CLAUDE.md imports ' + dangling.join(', ') + ", which doesn't exist." : 'Done.', args: args.filter((arg) => arg.startsWith('--')), usage: { input_tokens: 12 * turns, cache_read_input_tokens: (perRequest - 12) * turns, cache_creation_input_tokens: 0, output_tokens: 10 } }));
+process.stdout.write(JSON.stringify({ type: 'result', num_turns: turns, total_cost_usd: 0.01, imports, autoMemoryDisabled: process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY ?? null, result: dangling.length ? 'Note: CLAUDE.md imports ' + dangling.join(', ') + ", which doesn't exist." : 'Done.', args: args.filter((arg) => arg.startsWith('--')), usage: { input_tokens: 12 * turns, cache_read_input_tokens: (perRequest - 12) * turns, cache_creation_input_tokens: 0, output_tokens: 10 } }));
 `;
 
 async function git(root, ...args) {
@@ -109,6 +109,19 @@ test('isolated Claude Code trials run without user MCP servers or settings, and 
   assert.equal(JSON.stringify(report.variants[1].invocation).includes(root), false);
   assert.match(report.variants[1].trials[0].stdout, /"--strict-mcp-config","--setting-sources"/, 'the agent received the flags');
   assert.equal(report.comparison.winner, 'candidate', 'isolation does not block project instructions');
+  assert.deepEqual(report.variants.map((variant) => variant.invocation.env), [{ CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1' }, { CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1' }]);
+  assert.deepEqual(report.variants.map((variant) => JSON.parse(variant.trials[0].stdout).autoMemoryDisabled), ['1', '1'], 'every arm ran without shared auto-memory');
+});
+
+test('auto-memory stays off under an inherited environment, and stays untouched without isolation', { skip }, async () => {
+  const root = await repository();
+  const executable = await fakeClaude();
+  const inherited = { ...claudeConfig(executable, { isolate: true }), environment: { inherit: true } };
+  const isolated = await runExperiment({ config: inherited, root });
+  assert.ok(isolated.variants.every((variant) => JSON.parse(variant.trials[0].stdout).autoMemoryDisabled === '1'));
+  const plain = await runExperiment({ config: claudeConfig(executable), root });
+  assert.ok(plain.variants.every((variant) => JSON.parse(variant.trials[0].stdout).autoMemoryDisabled === null));
+  assert.deepEqual(plain.variants[0].invocation.env, {});
 });
 
 test('an agent that never reads the instructions gets a doubtful-delivery warning and label', { skip }, async () => {
@@ -158,7 +171,11 @@ test('doctor warns that Claude Code needs a bridge and that a base CLAUDE.md rea
   const { stdout } = await exec(process.execPath, [cli, 'doctor'], { cwd: root });
   assert.match(stdout, /! delivery +Claude Code does not read AGENTS\.md; every arm gets CLAUDE\.md @import so the treatment reaches it, and an arm without instructions gets an empty AGENTS\.md/);
   assert.match(stdout, /! delivery +HEAD already has CLAUDE\.md: its rules reach every arm/);
-  assert.match(stdout, /! isolation +your user settings, plugins, hooks, and MCP servers load into every trial/);
+  assert.match(stdout, /! isolation +your user settings, plugins, hooks, and MCP servers load into every trial, and all trials share one auto-memory directory/);
+  const isolated = { ...claudeConfig(await fakeClaude(), { isolate: true }) };
+  await writeFile(path.join(root, 'contexttest.json'), `${JSON.stringify(isolated, null, 2)}\n`);
+  const { stdout: isolatedStdout } = await exec(process.execPath, [cli, 'doctor'], { cwd: root });
+  assert.match(isolatedStdout, /✓ isolation +claude trials run with --strict-mcp-config --setting-sources project,local CLAUDE_CODE_DISABLE_AUTO_MEMORY=1/);
   assert.equal(await readFile(path.join(root, 'CLAUDE.md'), 'utf8'), '# Shared rules\n', 'doctor never edits the repository');
 });
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { agentStartFailure, agentVersion, buildCommand, deliveryFor, deliveryWarning, describeInvocation, parseClaudeUsage, parseCodexUsage, runAgent } from '../src/lib/adapters.mjs';
+import { agentEnvironment, agentStartFailure, agentVersion, buildCommand, deliveryFor, deliveryWarning, describeInvocation, parseClaudeUsage, parseCodexUsage, runAgent } from '../src/lib/adapters.mjs';
 
 test('builds the verified Codex CLI contract without bypass flags', () => {
   const invocation = buildCommand({ provider: 'codex', model: 'gpt-test', ignoreUserConfig: true }, 'do work', '/repo');
@@ -106,4 +106,21 @@ test('captures the agent CLI version without probing custom commands', async () 
   assert.equal(await agentVersion({ provider: 'claude', executable: process.execPath }, { inherit: false }), process.version);
   assert.equal(await agentVersion({ provider: 'command', command: [process.execPath] }, {}), null);
   assert.equal(await agentVersion({ provider: 'codex', executable: 'contexttest-definitely-missing-codex' }, {}), null);
+});
+
+test('isolated Claude Code trials disable auto-memory whether the environment is inherited or not', () => {
+  const source = { PATH: '/bin', HOME: '/home/user', CLAUDE_CODE_DISABLE_AUTO_MEMORY: '0', UNRELATED: 'kept only when inherited' };
+  const isolated = { provider: 'claude', isolate: true };
+  const minimal = agentEnvironment(isolated, { inherit: false }, source);
+  assert.equal(minimal.CLAUDE_CODE_DISABLE_AUTO_MEMORY, '1');
+  assert.equal(minimal.UNRELATED, undefined, 'isolation adds one variable; it does not widen the environment');
+  const inherited = agentEnvironment(isolated, { inherit: true }, source);
+  assert.equal(inherited.CLAUDE_CODE_DISABLE_AUTO_MEMORY, '1', 'an inherited 0 cannot reopen the shared memory directory');
+  assert.equal(inherited.UNRELATED, 'kept only when inherited');
+  assert.equal(agentEnvironment(isolated, { set: { CLAUDE_CODE_DISABLE_AUTO_MEMORY: 'false' } }, source).CLAUDE_CODE_DISABLE_AUTO_MEMORY, '1');
+  assert.equal(agentEnvironment({ provider: 'claude' }, { inherit: false }, source).CLAUDE_CODE_DISABLE_AUTO_MEMORY, undefined, 'without isolation nothing is added');
+  assert.equal(agentEnvironment({ provider: 'codex', isolate: true }, { inherit: false }, source).CLAUDE_CODE_DISABLE_AUTO_MEMORY, undefined);
+  assert.deepEqual(describeInvocation(isolated).env, { CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1' });
+  assert.deepEqual(describeInvocation({ provider: 'claude' }).env, {});
+  assert.deepEqual(describeInvocation({ provider: 'codex', isolate: true }).env, {});
 });

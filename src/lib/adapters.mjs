@@ -104,6 +104,26 @@ export const ISOLATION_FLAGS = {
   codex: ['--ignore-user-config'],
 };
 
+// Variables isolation adds to the agent's environment. Claude Code keys its
+// auto-memory directory by repository, and every trial worktree belongs to
+// the same repository, so without this all trials—both arms, every attempt—
+// would share one memory directory: a memory written in one trial could be
+// read by a later trial in the other arm.
+export const ISOLATION_ENV = {
+  claude: { CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1' },
+};
+
+// The environment an agent runs with: the configured environment, then the
+// isolation variables, which win over inherited or configured values so a
+// stray setting cannot quietly reopen the channel isolation closes.
+export function isolationEnvironment(agent) {
+  return agent.isolate ? { ...(ISOLATION_ENV[agent.provider] ?? {}) } : {};
+}
+
+export function agentEnvironment(agent, environment = {}, source = process.env) {
+  return { ...safeEnvironment(environment, source), ...isolationEnvironment(agent) };
+}
+
 export function buildCommand(agent, prompt, cwd) {
   if (agent.provider === 'codex') {
     const args = ['exec', '--ephemeral', '--sandbox', 'workspace-write', '--color', 'never', '--json', '-C', cwd];
@@ -134,7 +154,9 @@ export function describeInvocation(agent, environment = {}) {
   if (agent.provider === 'mock') return null;
   const secrets = environmentSecrets(environment, { ...process.env, ...safeEnvironment(environment) });
   const invocation = buildCommand(agent, '[PROMPT]', '[WORKTREE]');
-  return { command: redact(invocation.command, secrets), args: invocation.args.map((arg) => redact(arg, secrets)) };
+  // Only the variables ContextTest itself adds; the configured environment
+  // can hold credentials and never enters a report.
+  return { command: redact(invocation.command, secrets), args: invocation.args.map((arg) => redact(arg, secrets)), env: isolationEnvironment(agent) };
 }
 
 // Agent behavior changes between CLI releases, so the version belongs in the
@@ -148,7 +170,7 @@ export async function agentVersion(agent, environment = {}) {
 }
 
 export async function runAgent({ agent, prompt, cwd, environment, onOutput, mock }) {
-  const env = safeEnvironment(environment);
+  const env = agentEnvironment(agent, environment);
   const secrets = environmentSecrets(environment, { ...process.env, ...env });
   if (agent.provider === 'mock') {
     if (!mock?.command) throw new Error('Mock tasks require mock.command.');
@@ -168,6 +190,6 @@ export async function runAgent({ agent, prompt, cwd, environment, onOutput, mock
     stdout: redact(result.stdout, secrets),
     stderr: redact(result.stderr, secrets),
     usage: invocation.parseUsage(result.stdout),
-    invocation: { command: invocation.command, args: invocation.args.map((arg) => arg === prompt ? '[PROMPT]' : redact(arg, secrets)) },
+    invocation: { command: invocation.command, args: invocation.args.map((arg) => arg === prompt ? '[PROMPT]' : redact(arg, secrets)), env: isolationEnvironment(agent) },
   };
 }

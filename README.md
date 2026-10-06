@@ -159,14 +159,18 @@ Every report also runs a passive delivery check. Instructions travel with every 
 
 ### Keep your own agent setup out of the experiment
 
-By default the agent runs with everything installed on the experimenter's machine. Claude Code loads user settings, plugins, hooks, skills, and MCP servers into every trial; Codex applies `~/.codex/config.toml`. That makes results depend on whose laptop ran them, and a large personal setup can dwarf the instruction file being tested. Set `"isolate": true` on the agent:
+By default the agent runs with everything installed on the experimenter's machine. Claude Code loads user settings, plugins, hooks, skills, and MCP servers into every trial; Codex applies `~/.codex/config.toml`. That makes results depend on whose laptop ran them, and a large personal setup can dwarf the instruction file being tested.
+
+Claude Code's auto-memory is a channel between trials. It is keyed by repository, and every trial worktree belongs to the same repository, so without isolation all trials—both arms, every attempt—share one memory directory under `~/.claude/projects/`. A memory written in one trial could be read by a later trial in the other arm.
+
+Set `"isolate": true` on the agent:
 
 | Agent | `isolate: true` adds |
 |---|---|
-| Claude Code | `--strict-mcp-config --setting-sources project,local`: no MCP servers unless the project declares them, no user settings, plugins, or hooks |
+| Claude Code | `--strict-mcp-config --setting-sources project,local`: no MCP servers unless the project declares them, no user settings, plugins, or hooks; and `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` in the agent's environment, so no trial reads or writes auto-memory |
 | Codex | `--ignore-user-config` |
 
-In a Claude Code canary run, isolation cut per-request input from about 51,000 tokens to about 27,600 and roughly halved cost, while the project's instructions were still delivered. Isolation narrows machine-specific state; it is not a sandbox, and other user-level state such as credentials still applies. Every report records the exact command-line flags per variant (with the prompt and worktree as placeholders) and the agent's `--version` output, because agent behavior changes between CLI releases. `contexttest doctor` warns when a Codex or Claude Code experiment is not isolated.
+In a Claude Code canary run, isolation cut per-request input from about 51,000 tokens to about 27,600 and roughly halved cost, while the project's instructions were still delivered. Isolation narrows machine-specific state; it is not a sandbox, and other user-level state such as credentials still applies. The isolation variable is added after the configured environment, so it applies with `environment.inherit` true or false and overrides an inherited or configured value. Every report records the exact command-line flags and isolation variables per variant (with the prompt and worktree as placeholders) and the agent's `--version` output, because agent behavior changes between CLI releases. `contexttest doctor` warns when a Codex or Claude Code experiment is not isolated.
 
 ## A complete experiment
 
@@ -407,7 +411,7 @@ ContextTest therefore:
 
 - Uses detached worktrees and removes them after each run
 - Never enables permission or sandbox bypass by default
-- Offers `agent.isolate` to keep user-level agent plugins, hooks, settings, and MCP servers out of trials
+- Offers `agent.isolate` to keep user-level agent plugins, hooks, settings, MCP servers, and Claude Code's shared auto-memory out of trials
 - Strips environment variables except a small runtime allowlist
 - Requires explicit opt-in for API keys and other credentials
 - Redacts common token formats and allowlisted secret values from reports

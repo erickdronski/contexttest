@@ -123,7 +123,7 @@ The JSON also records resolved commits per task, configuration digest, runner ve
 Two fields make agent runs reproducible across machines and releases:
 
 - `runtime.agents[]` lists each agent's provider, configured executable, and the first line of its `--version` output (Codex and Claude Code only; custom commands are never probed);
-- `variants[].invocation` is the exact command line each arm ran, with `[PROMPT]` and `[WORKTREE]` placeholders and redaction applied—so isolation flags such as `--strict-mcp-config` are visible.
+- `variants[].invocation` is the exact command line each arm ran, with `[PROMPT]` and `[WORKTREE]` placeholders and redaction applied—so isolation flags such as `--strict-mcp-config` are visible—plus `env`, the variables ContextTest itself added for isolation, such as `CLAUDE_CODE_DISABLE_AUTO_MEMORY`. The configured environment is never recorded.
 
 ## Sharing safely
 
