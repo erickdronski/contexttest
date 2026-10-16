@@ -295,7 +295,7 @@ contexttest aggregate runs/2026-10-01/report.json runs/2026-10-06/report.json --
 
 Pairs stay inside their own run—attempts are renumbered per source—so the pooled exact test only counts disagreements between arms that ran side by side. Every source run is also analyzed on its own and shown beside the pooled result, with a heterogeneity summary: when runs disagree on the leader, the report says so instead of letting the average hide it.
 
-Aggregation refuses reports whose variant names, variant order, or task sets differ, and refuses to count the same run twice. It pools—but warns about and records—differences in configuration digest, agent or model, instruction digest, task refs, project, or ContextTest version, because accumulating evidence across commits and days is the purpose. Source diagnostics stay in the source reports; the aggregate keeps compact trials, enough to recompute every number.
+Aggregation refuses reports whose variant names, variant order, or task sets differ, and refuses to count the same run twice. Within each source, trial identities must be unique, name their containing variant and a declared task, and form complete pairs with positive integer attempts. It pools—but warns about and records—differences in configuration digest, agent or model, instruction digest, task refs, project, or ContextTest version, because accumulating evidence across commits and days is the purpose. Source diagnostics stay in the source reports; the aggregate keeps compact trials, enough to recompute every number.
 
 See the [aggregation demonstration](examples/aggregate/README.md) and its [committed report](examples/aggregate/output/report.html).
 

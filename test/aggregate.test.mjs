@@ -115,3 +115,40 @@ test('writes JSON and HTML, refuses to overwrite a source, and guards its defaul
   await assert.rejects(() => access(path.join(outside, 'aggregates')));
   await assert.rejects(() => loadReports(['runs/missing.json'], cwd), /Could not read runs\/missing\.json as a JSON report/);
 });
+
+
+test('rejects malformed trial identities before computing pooled statistics', () => {
+  const valid = report({ runId: 'run-a', outcomes: [[0, 1], [1, 1]] });
+  const mutations = [
+    [(value) => value.variants[0].trials.push({ ...value.variants[0].trials[0] }), /duplicates trial/],
+    [(value) => value.variants[0].trials.pop(), /incomplete pairs/],
+    [(value) => { value.variants[0].trials[0].variant = 'with'; }, /invalid trial identity/],
+    [(value) => { value.variants[0].trials[0].task = 'undeclared'; }, /invalid trial identity/],
+    [(value) => { value.variants[0].trials[0].attempt = 0; }, /invalid trial identity/],
+    [(value) => { value.variants[0].trials[0].attempt = -1; }, /invalid trial identity/],
+    [(value) => { value.variants[0].trials[0].attempt = Number.MAX_SAFE_INTEGER + 1; }, /invalid trial identity/],
+    [(value) => { value.variants[1].name = 'without'; }, /distinct variants/],
+    [(value) => { value.tasks = ['task', 'task']; }, /distinct, non-empty task/],
+    [(value) => { value.variants[0].trials = []; }, /missing trials/],
+  ];
+  for (const [mutate, message] of mutations) {
+    const invalid = structuredClone(valid);
+    invalid.runId = 'run-b';
+    mutate(invalid);
+    assert.throws(() => aggregateReports([source(valid), source(invalid)]), message);
+  }
+});
+
+test('custom aggregate output cannot overwrite a source through an artifact symlink', { skip: process.platform === 'win32' }, async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), 'contexttest-aggregate-symlink-'));
+  const original = JSON.stringify(report({ runId: 'run-a', outcomes: [[0, 1]] }));
+  await writeFile(path.join(cwd, 'source.json'), original);
+  const out = path.join(cwd, 'output');
+  await mkdir(out);
+  await symlink(path.join(cwd, 'source.json'), path.join(out, 'report.json'));
+  await writeFile(path.join(cwd, 'second.json'), JSON.stringify(report({ runId: 'run-b', outcomes: [[0, 1]] })));
+  const inputs = await loadReports(['source.json', 'second.json'], cwd);
+  await assert.rejects(() => writeAggregate({ report: aggregateReports(inputs), inputs, out, cwd }), /Refusing symlinked aggregate artifact/);
+  assert.equal(await readFile(path.join(cwd, 'source.json'), 'utf8'), original);
+  await assert.rejects(() => access(path.join(out, 'report.html')));
+});
