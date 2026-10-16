@@ -4,6 +4,12 @@ All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve equals signs in inline CLI values such as `--config=case=v2.json`.
+- Reject duplicated, mismatched, missing, or invalid trial identities before aggregation, so every pooled observation belongs to exactly one complete pair.
+- Refuse symlinked aggregate artifact files before writing either output, including custom output directories.
+
 ## [0.3.1] — 2026-10-06
 
 ### Fixed

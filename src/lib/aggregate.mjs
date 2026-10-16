@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { readFile, realpath, writeFile } from 'node:fs/promises';
+import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeExperiment, deliveryWarnings, ensureSafeStateDirectory } from './engine.mjs';
 import { agentLabel, renderAggregateHtml, reportKind } from './reporter.mjs';
@@ -21,6 +21,21 @@ function validateSource({ path, report }) {
     && report.variants.every((variant) => typeof variant?.name === 'string' && Array.isArray(variant.trials) && variant.trials.every((trial) => typeof trial?.task === 'string' && Number.isInteger(trial.attempt) && typeof trial.passed === 'boolean'))
     && Array.isArray(report.tasks) && typeof report.runId === 'string';
   if (!complete) throw new Error(`${path} is not a complete experiment report: it needs two variants with trials, a task list, and a runId.`);
+  const names = report.variants.map((variant) => variant.name);
+  if (names.some((name) => !name) || new Set(names).size !== 2) throw new Error(`${path} must name two distinct variants.`);
+  if (!report.tasks.length || report.tasks.some((task) => typeof task !== 'string' || !task) || new Set(report.tasks).size !== report.tasks.length) throw new Error(`${path} must contain distinct, non-empty task names.`);
+  const identities = report.variants.map((variant) => {
+    const seen = new Set();
+    for (const trial of variant.trials) {
+      if (trial.variant !== variant.name || !report.tasks.includes(trial.task) || !Number.isSafeInteger(trial.attempt) || trial.attempt < 1) throw new Error(`${path} has an invalid trial identity in variant ${variant.name}; trials must name their containing variant, a declared task, and a positive safe-integer attempt.`);
+      const key = JSON.stringify([trial.task, trial.attempt]);
+      if (seen.has(key)) throw new Error(`${path} duplicates trial ${trial.task} / ${trial.attempt} in variant ${variant.name}; pooling would double-count an observation.`);
+      seen.add(key);
+    }
+    if (!seen.size || report.tasks.some((task) => !variant.trials.some((trial) => trial.task === task))) throw new Error(`${path} is missing trials for a declared task in variant ${variant.name}.`);
+    return seen;
+  });
+  if (identities[0].size !== identities[1].size || [...identities[0]].some((key) => !identities[1].has(key))) throw new Error(`${path} has incomplete pairs; each task and attempt must appear once in both variants.`);
 }
 
 // Keep what the pooled analysis needs. Diagnostics stay in the source reports.
@@ -195,6 +210,10 @@ export async function writeAggregate({ report, inputs, out, cwd = process.cwd() 
   }
   await ensureDir(directory);
   report.artifacts = { json: path.join(directory, 'report.json'), html: path.join(directory, 'report.html') };
+  for (const artifact of Object.values(report.artifacts)) {
+    const entry = await lstat(artifact).catch((error) => { if (error.code !== 'ENOENT') throw error; return null; });
+    if (entry?.isSymbolicLink()) throw new Error(`Refusing symlinked aggregate artifact: ${artifact}`);
+  }
   await writeJson(report.artifacts.json, report);
   await writeFile(report.artifacts.html, renderAggregateHtml(report), 'utf8');
   return report;

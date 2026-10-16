@@ -142,7 +142,9 @@ export function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const item = argv[index];
     if (!item.startsWith('--')) { positional.push(item); continue; }
-    const [rawName, inline] = item.slice(2).split('=', 2);
+    const separator = item.indexOf('=');
+    const rawName = item.slice(2, separator === -1 ? undefined : separator);
+    const inline = separator === -1 ? undefined : item.slice(separator + 1);
     const name = rawName.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
     if (inline !== undefined) flags[name] = inline;
     else if (argv[index + 1] && !argv[index + 1].startsWith('--')) flags[name] = argv[++index];

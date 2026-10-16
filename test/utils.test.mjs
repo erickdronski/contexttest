@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { environmentSecrets, findExecutable, isPathInside, redact, runProcess, safeEnvironment, seededRandom, seededShuffle, stableStringify, timestampId } from '../src/lib/utils.mjs';
+import { environmentSecrets, findExecutable, isPathInside, parseArgs, redact, runProcess, safeEnvironment, seededRandom, seededShuffle, stableStringify, timestampId } from '../src/lib/utils.mjs';
 
 test('redacts common token formats and explicit values', () => {
   const output = redact('key=sk-abcdefghijklmnopqrstuvwxyz secret=hunter2-value', ['hunter2-value']);
@@ -71,4 +71,11 @@ test('configured values apply on top of the environment whether or not it is inh
     assert.equal(configured.INHERITED_ONLY, inherit ? 'from the shell' : undefined);
     assert.equal(safeEnvironment({ inherit, set: { MODE: 'configured' }, deny: ['MODE'] }, source).MODE, undefined, 'deny still has the last word');
   }
+});
+
+
+test('inline flag values preserve equals signs and empty values', () => {
+  assert.deepEqual(parseArgs(['run', '--config=case=v2.json', '--out=a==b', '--task=']), {
+    positional: ['run'], flags: { config: 'case=v2.json', out: 'a==b', task: '' },
+  });
 });
