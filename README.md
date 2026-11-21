@@ -81,20 +81,15 @@ See the [use-case and decision guide](docs/USE-CASES.md) for concrete experiment
 
 ### Where this sits
 
-ContextTest is part of a collection of standalone tools for agent quality,
-cost visibility, and configuration review:
+Generate a baseline instruction file with `agentsmith`, then use ContextTest to
+measure whether a proposed change improves task completion.
 
 | Tool | Job |
 |---|---|
 | [agentsmith](https://github.com/erickdronski/agentsmith) | **Write** the file — derives an `AGENTS.md` from what your repo actually does, and detects drift in CI |
 | **ContextTest** | **Test** it — does the change measurably improve task completion? |
-| [burnrate](https://github.com/erickdronski/burnrate) | **Estimate cost** — local usage receipts and a Claude Code budget guard |
-| [tripwire](https://github.com/erickdronski/tripwire) | **Review configuration** — local permissions, hooks, skills, and MCP servers |
 | [gtm-skills](https://github.com/erickdronski/gtm-skills) | Go-to-market skills for agents, on a tested arithmetic engine |
 | [contexttest-findings](https://github.com/erickdronski/contexttest-findings) | Measured results for common `AGENTS.md` rules, produced with this tool |
-
-A typical workflow is to generate a baseline with `agentsmith`, evaluate a
-proposed change with ContextTest, and inspect recorded usage with `burnrate`.
 
 ## How it works
 
