@@ -94,6 +94,12 @@ test('refuses to pool older reports that recorded a provider refusal as a scored
     stdout: JSON.stringify({ type: 'result', is_error: true, duration_api_ms: 0, modelUsage: {}, num_turns: 1 }),
   });
   assert.throws(() => aggregateReports([source(valid), source(refused)]), /provider error before inference/);
+  variant.agent = { provider: 'codex' };
+  variant.trials[0].stdout = [
+    { type: 'thread.started' }, { type: 'turn.started' },
+    { type: 'turn.failed', error: { message: 'Quota exceeded. Check your plan and billing details.' } },
+  ].map((event) => JSON.stringify(event)).join('\n');
+  assert.throws(() => aggregateReports([source(valid), source(refused)]), /Codex reported a provider refusal/);
 });
 
 test('pools reports written by 0.2.0, which predate agents and digests per variant', async () => {

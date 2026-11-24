@@ -37,6 +37,12 @@ export function deliveryWarning(provider, delivery) {
 // experiment instead of being scored as the agent failing the task.
 export function agentStartFailure(agent, result) {
   if (result.spawnError) return `Could not start ${result.command}: ${result.spawnError}. Check that the agent executable is installed and on PATH.`;
+  if (agent.provider === 'codex' && Number.isInteger(result.code) && result.code !== 0 && !result.timedOut && typeof result.stdout === 'string') {
+    const usage = result.usage ?? {};
+    if (!usage.inputTokens && !usage.cachedInputTokens && !usage.outputTokens && codexRefusedBeforeWork(result.stdout)) {
+      return 'Codex reported a provider refusal before any recorded model work. Check authentication, model access, and usage limits.';
+    }
+  }
   if (agent.provider === 'claude') {
     const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
     const usage = result.usage ?? {};
@@ -62,17 +68,34 @@ export function agentStartFailure(agent, result) {
   return null;
 }
 
+function* codexEvents(stdout) {
+  for (const line of stdout.split('\n')) {
+    try { const event = JSON.parse(line); if (event && typeof event === 'object') yield event; }
+    catch { /* Non-JSON diagnostic lines are expected. */ }
+  }
+}
+
+function codexRefusedBeforeWork(stdout) {
+  const events = [...codexEvents(stdout)];
+  if (events[0]?.type !== 'thread.started') return false;
+  const last = events.at(-1);
+  if (last?.type !== 'turn.failed' || !/^(?:unexpected status (?:401|403|429)\b|quota exceeded\b|you['’]ve hit your usage limit\b)/i.test(last.error?.message ?? '')) return false;
+  let turns = 0;
+  for (const event of events.slice(1, -1)) {
+    if (event.type === 'turn.started') turns++;
+    else if (event.type !== 'error' && !(event.type === 'item.completed' && event.item?.type === 'error')) return false;
+  }
+  return turns === 1;
+}
+
 export function parseCodexUsage(stdout) {
   const usage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: null, totalInputTokens: 0, requests: null };
-  for (const line of stdout.split('\n')) {
-    try {
-      const event = JSON.parse(line);
-      const candidate = event.usage ?? event.data?.usage ?? event.item?.usage;
-      if (!candidate) continue;
-      usage.inputTokens = Math.max(usage.inputTokens, candidate.input_tokens ?? candidate.inputTokens ?? 0);
-      usage.cachedInputTokens = Math.max(usage.cachedInputTokens, candidate.cached_input_tokens ?? candidate.cachedInputTokens ?? 0);
-      usage.outputTokens = Math.max(usage.outputTokens, candidate.output_tokens ?? candidate.outputTokens ?? 0);
-    } catch { /* Non-JSON diagnostic lines are expected. */ }
+  for (const event of codexEvents(stdout)) {
+    const candidate = event.usage ?? event.data?.usage ?? event.item?.usage;
+    if (!candidate) continue;
+    usage.inputTokens = Math.max(usage.inputTokens, candidate.input_tokens ?? candidate.inputTokens ?? 0);
+    usage.cachedInputTokens = Math.max(usage.cachedInputTokens, candidate.cached_input_tokens ?? candidate.cachedInputTokens ?? 0);
+    usage.outputTokens = Math.max(usage.outputTokens, candidate.output_tokens ?? candidate.outputTokens ?? 0);
   }
   // Codex counts cached input inside input_tokens and does not report how many
   // model requests a run made.

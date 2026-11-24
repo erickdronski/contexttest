@@ -100,6 +100,23 @@ test('Claude authentication and quota refusals can report a turn without running
   assert.equal(classify({}, { timedOut: true }), null);
 });
 
+test('Codex provider refusals before work invalidate the run, and mid-trial failures stay scored', () => {
+  const started = [{ type: 'thread.started' }, { type: 'item.completed', item: { type: 'error', message: 'Using fallback model metadata.' } }, { type: 'turn.started' }];
+  function classify(message, extra = [], options = {}, prefix = started) {
+    const events = [...prefix, ...extra, { type: 'error', message }, { type: 'turn.failed', error: { message } }];
+    const stdout = events.map((event) => JSON.stringify(event)).join('\n');
+    return agentStartFailure({ provider: 'codex' }, { code: 1, stdout, usage: parseCodexUsage(stdout), ...options });
+  }
+  const quota = 'Quota exceeded. Check your plan and billing details.';
+  assert.match(classify('unexpected status 401 Unauthorized: Invalid API key'), /Codex reported a provider refusal/);
+  assert.match(classify(quota), /Codex reported a provider refusal/);
+  assert.equal(classify('stream disconnected before completion'), null);
+  assert.equal(classify(quota, [{ type: 'item.started', item: { type: 'command_execution' } }]), null);
+  assert.equal(classify(quota, [{ type: 'turn.completed', usage: { input_tokens: 10 } }]), null);
+  assert.equal(classify(quota, [], { timedOut: true }), null);
+  assert.equal(classify(quota, [], {}, [{ type: 'turn.started' }]), null, 'truncated archived output has no thread start');
+});
+
 test('a missing agent executable is a start failure, not an agent failure', async () => {
   const cwd = await mkdtemp(path.join(os.tmpdir(), 'contexttest-missing-agent-'));
   const result = await runAgent({ agent: { provider: 'command', command: ['contexttest-definitely-missing-agent'] }, prompt: 'x', cwd, environment: { inherit: false } });
