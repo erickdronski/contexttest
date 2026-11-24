@@ -27,6 +27,10 @@ if (model === 'not-a-model') {
   process.stdout.write('[claude-code:unrecognized_model]\n' + JSON.stringify({ type: 'result', is_error: true, num_turns: 0, usage: { input_tokens: 0, output_tokens: 0 } }));
   process.exit(1);
 }
+if (model === 'quota-fixture') {
+  process.stdout.write(JSON.stringify({ type: 'result', subtype: 'success', is_error: true, num_turns: 1, duration_api_ms: 0, modelUsage: {}, api_error_status: 429, usage: { input_tokens: 0, output_tokens: 0 } }));
+  process.exit(1);
+}
 // Like Claude Code 2.1.272, a dangling @import is not an error, but the model
 // notices it and spends an extra turn looking for the missing file.
 const imports = [];
@@ -155,6 +159,19 @@ test('an unrecognized Claude model invalidates the experiment instead of scoring
     () => runExperiment({ config, root }),
     /trial\(s\) failed before the agent could run[\s\S]*did not recognize model "not-a-model"/,
   );
+});
+
+test('a quota refusal invalidates a paired experiment without printing a verdict or writing a report', { skip }, async () => {
+  const root = await repository();
+  await writeFile(path.join(root, 'contexttest.json'), JSON.stringify(claudeConfig(await fakeClaude(), { model: 'quota-fixture' })));
+  await assert.rejects(() => exec(process.execPath, [cli, 'run', '--json', '--report-dir', 'results'], { cwd: root }), (error) => {
+    assert.equal(error.code, 1);
+    assert.match(error.stderr, /provider error before inference/);
+    assert.equal(error.stdout.trim(), '');
+    return true;
+  });
+  await assert.rejects(readFile(path.join(root, 'results', 'report.json')), { code: 'ENOENT' });
+  await assert.rejects(readFile(path.join(root, 'results', 'report.html')), { code: 'ENOENT' });
 });
 
 test('a missing agent executable invalidates the experiment', { skip }, async () => {

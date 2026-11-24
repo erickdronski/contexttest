@@ -80,6 +80,26 @@ test('a Claude result with no turns is a start failure, but a timeout is a score
   assert.equal(agentStartFailure({ provider: 'claude' }, { ...result, stdout: '', usage: parseClaudeUsage('') }), null, 'no result object: the agent may have crashed mid-run');
 });
 
+test('Claude authentication and quota refusals can report a turn without running the model', () => {
+  const envelope = {
+    type: 'result', subtype: 'success', is_error: true, num_turns: 1,
+    duration_api_ms: 0, modelUsage: {}, usage: { input_tokens: 0, output_tokens: 0 },
+  };
+  function classify(changes = {}, options = {}) {
+    const stdout = JSON.stringify({ ...envelope, ...changes });
+    return agentStartFailure({ provider: 'claude' }, { code: 1, stdout, usage: parseClaudeUsage(stdout), ...options });
+  }
+  assert.match(classify(), /provider error before inference/);
+  assert.match(classify({ api_error_status: 429 }), /provider error before inference/);
+  assert.equal(classify({ is_error: false }), null);
+  assert.equal(classify({ usage: { cache_read_input_tokens: 10 } }), null);
+  assert.equal(classify({ total_cost_usd: 0.01 }), null);
+  assert.equal(classify({ modelUsage: { example: {} } }), null);
+  assert.equal(classify({ duration_api_ms: 20 }), null);
+  assert.equal(classify({ modelUsage: undefined }), null);
+  assert.equal(classify({}, { timedOut: true }), null);
+});
+
 test('a missing agent executable is a start failure, not an agent failure', async () => {
   const cwd = await mkdtemp(path.join(os.tmpdir(), 'contexttest-missing-agent-'));
   const result = await runAgent({ agent: { provider: 'command', command: ['contexttest-definitely-missing-agent'] }, prompt: 'x', cwd, environment: { inherit: false } });

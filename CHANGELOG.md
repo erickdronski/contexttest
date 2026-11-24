@@ -2,11 +2,14 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses semantic versioning.
 
-## [Unreleased]
+## [0.3.2] — 2026-11-24
 
 ### Fixed
 
 - Preserve equals signs in inline CLI values such as `--config=case=v2.json`.
+- Treat Claude Code provider refusals with zero model usage and zero API time as infrastructure failures, even when the CLI counts a turn. Affected experiments exit without a verdict or report, and pooling rejects older reports that still contain these failures.
+- Parse Markdown heading markers in bounded passes during ablation, including empty headings with closing hashes.
+- Run the clean installation and CLI smoke test on every supported Node CI version.
 - Reject duplicated, mismatched, missing, or invalid trial identities before aggregation, so every pooled observation belongs to exactly one complete pair.
 - Refuse symlinked aggregate artifact files before writing either output, including custom output directories.
 

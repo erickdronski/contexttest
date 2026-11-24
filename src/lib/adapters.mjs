@@ -44,10 +44,18 @@ export function agentStartFailure(agent, result) {
     if (output.includes('[claude-code:unrecognized_model]') && consumed === 0) {
       return `Claude Code did not recognize model ${JSON.stringify(agent.model ?? 'default')}; the agent never ran. Check agent.model.`;
     }
+    // Claude Code can count a refused request as a turn. Require its explicit
+    // error and no evidence of inference before discarding the experiment.
+    const envelope = typeof result.stdout === 'string' ? lastJsonObject(result.stdout) : null;
+    if (!result.timedOut && consumed === 0 && (usage.costUsd ?? 0) === 0 && envelope?.type === 'result' && envelope.is_error === true
+      && envelope.duration_api_ms === 0 && envelope.modelUsage && typeof envelope.modelUsage === 'object'
+      && !Array.isArray(envelope.modelUsage) && Object.keys(envelope.modelUsage).length === 0) {
+      return 'Claude Code reported a provider error before inference. Check authentication, model access, and usage limits.';
+    }
     // A reported result with zero turns and zero tokens means Claude Code
     // stopped before asking the model anything. A timeout is different: the
     // agent was working, so it stays a scored outcome.
-    if (result.code !== 0 && !result.timedOut && usage.requests === 0 && consumed === 0) {
+    if (Number.isInteger(result.code) && result.code !== 0 && !result.timedOut && usage.requests === 0 && consumed === 0) {
       return `Claude Code exited with code ${result.code} before its first turn; the agent never ran.`;
     }
   }

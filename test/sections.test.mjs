@@ -33,6 +33,11 @@ test('splits at one heading level, keeps the preamble, and nests deeper headings
   assert.deepEqual(split.headingCounts, { 1: 2, 2: 3, 3: 1 }, 'fenced headings are not counted');
 });
 
+test('reads ATX heading boundaries, optional closing hashes, and untitled sections', () => {
+  const markdown = ['  ## Testing ###  ', '## C#', '## #', '##', '    ## indented code', '##no-space', '####### extra', '##\tNested # title\t##\t'].join('\n');
+  assert.deepEqual(splitSections(markdown).sections.map(({ title }) => title), ['Testing', 'C#', '(untitled)', '(untitled)', 'Nested # title']);
+});
+
 test('removing a section removes exactly its bytes and nothing else', () => {
   const split = splitSections(RULES, 2);
   const withoutTesting = withoutSection(split, 1);

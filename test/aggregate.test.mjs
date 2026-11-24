@@ -84,6 +84,18 @@ test('warns about and records every difference that might make runs incomparable
   assert.equal(pooled.commit, null);
 });
 
+test('refuses to pool older reports that recorded a provider refusal as a scored trial', () => {
+  const valid = report({ runId: 'valid', outcomes: [[1, 1]] });
+  const refused = report({ runId: 'refused', version: '0.3.1', outcomes: [[0, 0]] });
+  const variant = refused.variants[1];
+  variant.agent = { provider: 'claude' };
+  Object.assign(variant.trials[0], {
+    exitCode: 1, timedOut: false, usage: { requests: 1, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costUsd: 0 },
+    stdout: JSON.stringify({ type: 'result', is_error: true, duration_api_ms: 0, modelUsage: {}, num_turns: 1 }),
+  });
+  assert.throws(() => aggregateReports([source(valid), source(refused)]), /provider error before inference/);
+});
+
 test('pools reports written by 0.2.0, which predate agents and digests per variant', async () => {
   const legacy = JSON.parse(await readFile(new URL('./fixtures/report-v0.2.0.json', import.meta.url), 'utf8'));
   const pooled = aggregateReports([source(legacy), source({ ...legacy, runId: 'calculator-demo-replay' })]);

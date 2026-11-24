@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { agentStartFailure } from './adapters.mjs';
 import { analyzeExperiment, deliveryWarnings, ensureSafeStateDirectory } from './engine.mjs';
 import { agentLabel, renderAggregateHtml, reportKind } from './reporter.mjs';
 import { ensureDir, slug, timestampId, VERSION, writeJson } from './utils.mjs';
@@ -28,6 +29,8 @@ function validateSource({ path, report }) {
     const seen = new Set();
     for (const trial of variant.trials) {
       if (trial.variant !== variant.name || !report.tasks.includes(trial.task) || !Number.isSafeInteger(trial.attempt) || trial.attempt < 1) throw new Error(`${path} has an invalid trial identity in variant ${variant.name}; trials must name their containing variant, a declared task, and a positive safe-integer attempt.`);
+      const startFailure = agentStartFailure(variant.agent ?? report.agent ?? {}, { ...trial, code: trial.exitCode });
+      if (startFailure) throw new Error(`${path} contains an invalid trial for ${variant.name}, ${trial.task} / ${trial.attempt}: ${startFailure}`);
       const key = JSON.stringify([trial.task, trial.attempt]);
       if (seen.has(key)) throw new Error(`${path} duplicates trial ${trial.task} / ${trial.attempt} in variant ${variant.name}; pooling would double-count an observation.`);
       seen.add(key);
