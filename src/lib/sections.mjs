@@ -6,7 +6,16 @@
 // is kept in every arm.
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
-const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
+const HEADING = /^ {0,3}(#{1,6})(?=[ \t]|$)/;
+
+function headingTitle(line, start) {
+  let end = line.length;
+  while (end > start && (line[end - 1] === ' ' || line[end - 1] === '\t')) end--;
+  let closing = end;
+  while (closing > start && line[closing - 1] === '#') closing--;
+  if (closing < end && (line[closing - 1] === ' ' || line[closing - 1] === '\t')) end = closing;
+  return line.slice(start, end).trim() || '(untitled)';
+}
 
 export function splitSections(text, level = 2) {
   if (!Number.isInteger(level) || level < 1 || level > 6) throw new Error('The heading level must be an integer from 1 to 6.');
@@ -32,7 +41,7 @@ export function splitSections(text, level = 2) {
     headingCounts[depth] = (headingCounts[depth] ?? 0) + 1;
     if (depth > level) continue;
     close(index);
-    current = { kind: depth === level ? 'section' : 'kept', start: index, title: depth === level ? (heading[2] ?? '').trim() || '(untitled)' : null };
+    current = { kind: depth === level ? 'section' : 'kept', start: index, title: depth === level ? headingTitle(line, heading[0].length) : null };
   }
   close(lines.length);
   const split = { text, lines, trailingNewline, segments, level, headingCounts };
